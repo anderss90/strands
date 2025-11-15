@@ -127,7 +127,7 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
   const isOwner = user?.id === image.userId;
 
   return (
-    <div className="fixed inset-0 bg-black z-[100] flex flex-col animate-fade-in overflow-hidden">
+    <div className="fixed inset-x-0 top-0 bottom-16 bg-black z-[100] flex flex-col animate-fade-in overflow-hidden">
       {/* Header - Fixed at top */}
       <div className="flex-shrink-0 flex items-center justify-between p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-300 z-10">
         <button
