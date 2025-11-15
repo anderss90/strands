@@ -189,3 +189,23 @@ button, a, input, select, textarea {
   }
 }
 
+/* Make all input text black */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  color: #000000 !important;
+}
+
+/* Ensure placeholder text is visible but doesn't override input text color */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
