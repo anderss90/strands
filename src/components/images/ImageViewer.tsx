@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { imageApi, Image } from '@/lib/api';
+import { imageApi, Image, Comment } from '@/lib/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 interface ImageViewerProps {
@@ -16,11 +16,16 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
   useEffect(() => {
     fetchImage();
+    fetchComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageId]);
 
@@ -34,6 +39,34 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
       setError(err.message || 'Failed to load image');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchComments = async () => {
+    try {
+      setCommentsLoading(true);
+      const data = await imageApi.getImageComments(imageId);
+      setComments(data.comments);
+    } catch (err: any) {
+      console.error('Failed to load comments:', err);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleCommentSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!commentText.trim() || submittingComment) return;
+
+    try {
+      setSubmittingComment(true);
+      const newComment = await imageApi.createComment(imageId, commentText.trim());
+      setComments(prev => [...prev, newComment]);
+      setCommentText('');
+    } catch (err: any) {
+      alert(err.message || 'Failed to post comment');
+    } finally {
+      setSubmittingComment(false);
     }
   };
 
@@ -157,40 +190,109 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
       </div>
 
       {/* Footer */}
-      <div className="p-4 bg-black/50 backdrop-blur-sm text-white text-sm transition-opacity duration-300 animate-slide-up">
-        {image.groups && image.groups.length > 0 && (
-          <div className="mb-2">
-            <p className="text-gray-400 text-xs mb-1">Shared in:</p>
-            <div className="flex flex-wrap gap-1">
-              {image.groups.map((group) => (
-                <span
-                  key={group.id}
-                  className="bg-blue-600 px-2 py-1 rounded text-xs"
-                >
-                  {group.name}
-                </span>
-              ))}
+      <div className="bg-black/50 backdrop-blur-sm text-white text-sm transition-opacity duration-300 animate-slide-up flex flex-col max-h-[50vh]">
+        {/* Image Info */}
+        <div className="p-4 border-b border-white/10">
+          {image.groups && image.groups.length > 0 && (
+            <div className="mb-2">
+              <p className="text-gray-400 text-xs mb-1">Shared in:</p>
+              <div className="flex flex-wrap gap-1">
+                {image.groups.map((group) => (
+                  <span
+                    key={group.id}
+                    className="bg-blue-600 px-2 py-1 rounded text-xs"
+                  >
+                    {group.name}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-        {image.user && (
-          <div className="flex items-center gap-2">
-            {image.user.profilePictureUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image.user.profilePictureUrl}
-                alt={image.user.displayName}
-                className="w-6 h-6 rounded-full"
-              />
+          )}
+          {image.user && (
+            <div className="flex items-center gap-2">
+              {image.user.profilePictureUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={image.user.profilePictureUrl}
+                  alt={image.user.displayName}
+                  className="w-6 h-6 rounded-full"
+                />
+              )}
+              <div>
+                <p className="font-medium">@{image.user.username}</p>
+                <p className="text-gray-400 text-xs">
+                  {new Date(image.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Comments Section */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* Comments List */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {commentsLoading ? (
+              <div className="text-center py-4">
+                <LoadingSpinner size="sm" className="text-white" />
+              </div>
+            ) : comments.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-4">No comments yet</p>
+            ) : (
+              comments.map((comment) => (
+                <div key={comment.id} className="flex gap-2 animate-fade-in">
+                  {comment.user.profilePictureUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={comment.user.profilePictureUrl}
+                      alt={comment.user.displayName}
+                      className="w-8 h-8 rounded-full flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-medium">
+                      {comment.user.displayName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="bg-white/10 rounded-lg p-2">
+                      <p className="font-medium text-xs mb-1">{comment.user.displayName}</p>
+                      <p className="text-sm break-words">{comment.content}</p>
+                    </div>
+                    <p className="text-gray-400 text-xs mt-1 ml-2">
+                      {new Date(comment.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))
             )}
-            <div>
-              <p className="font-medium">@{image.user.username}</p>
-              <p className="text-gray-400 text-xs">
-                {new Date(image.createdAt).toLocaleDateString()}
-              </p>
-            </div>
           </div>
-        )}
+
+          {/* Comment Input */}
+          <form onSubmit={handleCommentSubmit} className="p-4 border-t border-white/10">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Write a comment..."
+                className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-h-[44px]"
+                maxLength={1000}
+                disabled={submittingComment}
+              />
+              <button
+                type="submit"
+                disabled={!commentText.trim() || submittingComment}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] transition-all duration-200"
+              >
+                {submittingComment ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  'Post'
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

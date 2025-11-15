@@ -322,5 +322,32 @@ export const imageApi = {
       method: 'DELETE',
     });
   },
+
+  // Comments API
+  getImageComments: async (imageId: string) => {
+    return apiRequest<{ comments: Comment[] }>(`/api/images/${imageId}/comments`);
+  },
+
+  createComment: async (imageId: string, content: string) => {
+    return apiRequest<Comment>(`/api/images/${imageId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  },
 };
+
+// Comment types
+export interface Comment {
+  id: string;
+  imageId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  user: {
+    id: string;
+    username: string;
+    displayName: string;
+    profilePictureUrl: string | null;
+  };
+}
 

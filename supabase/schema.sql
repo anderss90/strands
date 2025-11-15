@@ -65,6 +65,16 @@ CREATE TABLE IF NOT EXISTS image_group_shares (
   UNIQUE(image_id, group_id)
 );
 
+-- Image comments table
+CREATE TABLE IF NOT EXISTS image_comments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  image_id UUID NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CHECK (char_length(content) > 0 AND char_length(content) <= 1000)
+);
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_friends_friend_id ON friends(friend_id);
@@ -76,6 +86,9 @@ CREATE INDEX IF NOT EXISTS idx_images_user_id ON images(user_id);
 CREATE INDEX IF NOT EXISTS idx_images_created_at ON images(created_at);
 CREATE INDEX IF NOT EXISTS idx_image_group_shares_image_id ON image_group_shares(image_id);
 CREATE INDEX IF NOT EXISTS idx_image_group_shares_group_id ON image_group_shares(group_id);
+CREATE INDEX IF NOT EXISTS idx_image_comments_image_id ON image_comments(image_id);
+CREATE INDEX IF NOT EXISTS idx_image_comments_user_id ON image_comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_image_comments_created_at ON image_comments(created_at);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -104,6 +117,7 @@ ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE image_group_shares ENABLE ROW LEVEL SECURITY;
+ALTER TABLE image_comments ENABLE ROW LEVEL SECURITY;
 
 -- Note: RLS policies should be created based on your authentication strategy
 -- For now, we'll rely on application-level authorization
