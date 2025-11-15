@@ -1,0 +1,326 @@
+// API utility functions for client-side requests
+
+// Use relative URLs for API calls in the browser
+const API_BASE_URL = typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL || '');
+
+export interface ApiError {
+  message: string;
+  statusCode?: number;
+}
+
+export async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error: ApiError = await response.json().catch(() => ({
+      message: 'An error occurred',
+    }));
+    throw error;
+  }
+
+  return response.json();
+}
+
+// Auth API functions
+export const authApi = {
+  signup: async (data: { username: string; password: string }) => {
+    return apiRequest<{ user: any; tokens: { accessToken: string; refreshToken: string } }>('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  login: async (data: { username: string; password: string }) => {
+    return apiRequest<{ user: any; tokens: { accessToken: string; refreshToken: string } }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  refresh: async (refreshToken: string) => {
+    return apiRequest<{ accessToken: string }>('/api/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    });
+  },
+
+  logout: async () => {
+    return apiRequest('/api/auth/logout', {
+      method: 'POST',
+    });
+  },
+};
+
+// User API functions
+export const userApi = {
+  getProfile: async () => {
+    return apiRequest<{
+      id: string;
+      email: string;
+      username: string;
+      display_name: string;
+      profile_picture_url: string | null;
+      created_at: string;
+      updated_at: string;
+    }>('/api/users/profile');
+  },
+
+  updateProfile: async (data: { displayName?: string; profilePictureUrl?: string }) => {
+    return apiRequest<{
+      id: string;
+      email: string;
+      username: string;
+      display_name: string;
+      profile_picture_url: string | null;
+      created_at: string;
+      updated_at: string;
+    }>('/api/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  search: async (query: string) => {
+    return apiRequest<{
+      id: string;
+      email: string;
+      username: string;
+      displayName: string;
+      profilePictureUrl: string | null;
+      createdAt?: string;
+    }[]>(`/api/users/search?q=${encodeURIComponent(query)}`);
+  },
+};
+
+// Friend API functions
+export interface Friend {
+  id: string;
+  userId: string;
+  username: string;
+  displayName: string;
+  profilePictureUrl: string | null;
+  friendshipCreatedAt: string;
+}
+
+export interface FriendRequest {
+  id: string;
+  status: string;
+  createdAt: string;
+  sender: {
+    id: string;
+    username: string;
+    displayName: string;
+    profilePictureUrl: string | null;
+  } | null;
+  receiver: {
+    id: string;
+    username: string;
+    displayName: string;
+    profilePictureUrl: string | null;
+  } | null;
+  isReceived: boolean;
+}
+
+export const friendApi = {
+  getFriends: async () => {
+    return apiRequest<Friend[]>('/api/friends');
+  },
+
+  getFriendRequests: async () => {
+    return apiRequest<FriendRequest[]>('/api/friends/requests');
+  },
+
+  sendFriendRequest: async (friendId: string) => {
+    return apiRequest<{ id: string; message: string }>('/api/friends/requests', {
+      method: 'POST',
+      body: JSON.stringify({ friendId }),
+    });
+  },
+
+  updateFriendRequest: async (requestId: string, status: 'accepted' | 'declined') => {
+    return apiRequest<{ id: string; status: string; message: string }>(`/api/friends/requests/${requestId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  removeFriend: async (friendId: string) => {
+    return apiRequest<{ message: string }>(`/api/friends/${friendId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Group API functions
+export interface Group {
+  id: string;
+  name: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  userRole?: 'admin' | 'member';
+  joinedAt?: string;
+}
+
+export interface GroupMember {
+  id: string;
+  groupId: string;
+  userId: string;
+  role: 'admin' | 'member';
+  joinedAt: string;
+  user?: {
+    id: string;
+    username: string;
+    displayName: string;
+    profilePictureUrl: string | null;
+  };
+}
+
+export interface GroupWithMembers extends Group {
+  members?: GroupMember[];
+}
+
+export const groupApi = {
+  getGroups: async () => {
+    return apiRequest<Group[]>('/api/groups');
+  },
+
+  getGroup: async (id: string) => {
+    return apiRequest<GroupWithMembers>(`/api/groups/${id}`);
+  },
+
+  createGroup: async (data: { name: string; memberIds?: string[] }) => {
+    return apiRequest<Group>('/api/groups', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteGroup: async (groupId: string) => {
+    return apiRequest<{ message: string }>(`/api/groups/${groupId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  addMembersToGroup: async (groupId: string, memberIds: string[]) => {
+    return apiRequest<{ message: string; addedMemberIds: string[] }>(`/api/groups/${groupId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ memberIds }),
+    });
+  },
+
+  removeMemberFromGroup: async (groupId: string, userId: string) => {
+    return apiRequest<{ message: string }>(`/api/groups/${groupId}/members/${userId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  leaveGroup: async (groupId: string) => {
+    return apiRequest<{ message: string }>(`/api/groups/${groupId}/leave`, {
+      method: 'POST',
+    });
+  },
+};
+
+// Image API functions
+export interface Image {
+  id: string;
+  userId: string;
+  imageUrl: string;
+  thumbnailUrl: string | null;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+  user?: {
+    id: string;
+    username: string;
+    displayName: string;
+    profilePictureUrl: string | null;
+  };
+  groups?: Array<{
+    id: string;
+    name: string;
+  }>;
+}
+
+export interface ImageFeedResponse {
+  images: Image[];
+  pagination: {
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
+export const imageApi = {
+  uploadImage: async (file: File, groupIds: string[]) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('groupIds', JSON.stringify(groupIds));
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch('/api/images/upload', {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+      throw error;
+    }
+
+    return response.json();
+  },
+
+  getImageFeed: async (limit?: number, offset?: number) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    const query = params.toString();
+    return apiRequest<ImageFeedResponse>(`/api/images/feed${query ? `?${query}` : ''}`);
+  },
+
+  getGroupImages: async (groupId: string, limit?: number, offset?: number) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    const query = params.toString();
+    return apiRequest<ImageFeedResponse>(`/api/images/group/${groupId}${query ? `?${query}` : ''}`);
+  },
+
+  getImage: async (id: string) => {
+    return apiRequest<Image>(`/api/images/${id}`);
+  },
+
+  deleteImage: async (id: string) => {
+    return apiRequest<{ message: string }>(`/api/images/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
