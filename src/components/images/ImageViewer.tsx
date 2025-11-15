@@ -190,9 +190,9 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
       </div>
 
       {/* Footer */}
-      <div className="bg-black/50 backdrop-blur-sm text-white text-sm transition-opacity duration-300 animate-slide-up flex flex-col max-h-[50vh]">
+      <div className="bg-black/50 backdrop-blur-sm text-white text-sm transition-opacity duration-300 animate-slide-up flex flex-col max-h-[50vh] min-h-0">
         {/* Image Info */}
-        <div className="p-4 border-b border-white/10">
+        <div className="flex-shrink-0 p-4 border-b border-white/10">
           {image.groups && image.groups.length > 0 && (
             <div className="mb-2">
               <p className="text-gray-400 text-xs mb-1">Shared in:</p>
@@ -229,9 +229,9 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
         </div>
 
         {/* Comments Section */}
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Comments List */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Comments List - Scrollable */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
             {commentsLoading ? (
               <div className="text-center py-4">
                 <LoadingSpinner size="sm" className="text-white" />
@@ -267,8 +267,8 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
             )}
           </div>
 
-          {/* Comment Input */}
-          <form onSubmit={handleCommentSubmit} className="p-4 border-t border-white/10">
+          {/* Comment Input - Always visible at bottom */}
+          <form onSubmit={handleCommentSubmit} className="flex-shrink-0 p-4 border-t border-white/10 bg-black/50">
             <div className="flex gap-2">
               <input
                 type="text"
