@@ -159,14 +159,54 @@ Before deploying, ensure your Supabase database schema is initialized:
 
 ### Running Database Migrations
 
-If you've added new tables or changes to the schema:
+⚠️ **CRITICAL: Database Schema Change Workflow**
 
-1. Go to **Supabase Dashboard → SQL Editor**
-2. Check if there are any migration files in `supabase/migrations/` folder
-3. Run any pending migrations in order (they are numbered)
-4. For example, if you see `001_add_image_comments.sql`, copy its contents and run it in SQL Editor
+**Whenever you modify the database schema, you MUST follow these steps:**
 
-**Important**: Always run migrations after deploying code changes that require new database tables or columns.
+1. **Create a Migration File**
+   - If adding a new table: Create `supabase/migrations/XXX_add_table_name.sql` (numbered sequentially)
+   - If modifying existing tables: Create `supabase/migrations/XXX_modify_description.sql`
+   - Use `CREATE TABLE IF NOT EXISTS` and `CREATE INDEX IF NOT EXISTS` for safety
+   - Copy the migration file contents
+
+2. **Run the Migration in Supabase**
+   - Go to **Supabase Dashboard → SQL Editor**
+   - Click **New query**
+   - Paste the migration SQL
+   - Click **Run** (or Ctrl+Enter)
+   - Verify success: Should see "Success. No rows returned"
+
+3. **Update Required Tables List**
+   - If adding a new table, update `scripts/init-database.js`
+   - Add the new table name to the `requiredTables` array
+
+4. **Verify Locally (Optional)**
+   - Run `npm run init-db` to verify the table exists
+   - Should see the new table in the list
+
+5. **Commit and Push**
+   - Commit the migration file and any code changes
+   - Push to Git (which will trigger Vercel deployment)
+
+**Important**: 
+- ❌ **DO NOT** just modify `schema.sql` without creating a migration
+- ✅ **ALWAYS** create a migration file for schema changes
+- ✅ **ALWAYS** run migrations in Supabase before deploying to production
+- ✅ **ALWAYS** update `scripts/init-database.js` if adding new tables
+
+**Failure to run migrations will cause production errors like:**
+```
+error: relation "table_name" does not exist
+```
+
+### Example Migration Workflow
+
+If you see a migration file like `001_add_image_comments.sql`:
+
+1. Copy its contents
+2. Go to Supabase Dashboard → SQL Editor
+3. Paste and run
+4. Verify the table exists in your database
 
 ## Performance Optimization
 

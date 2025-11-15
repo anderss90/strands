@@ -1,6 +1,12 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- ⚠️ IMPORTANT: If you modify this schema file, you MUST run a migration in Supabase!
+-- 1. Create a new migration file in supabase/migrations/ with the changes
+-- 2. Run the migration in Supabase Dashboard → SQL Editor
+-- 3. Update scripts/init-database.js if new tables are added
+-- See DEPLOYMENT.md for detailed migration instructions
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
