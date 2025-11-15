@@ -9,6 +9,14 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
+  // Ensure React runs in development mode for tests (required for act() support)
+  testEnvironmentOptions: {
+    customExportConditions: [''],
+  },
+  // Force NODE_ENV to test during test execution
+  globals: {
+    'process.env.NODE_ENV': 'test',
+  },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

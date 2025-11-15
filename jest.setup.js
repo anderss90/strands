@@ -1,6 +1,16 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
 
+// CRITICAL: Force React into development mode for tests (required for act() support)
+// This must be set BEFORE React is imported anywhere
+// Vercel sets NODE_ENV=production, so we override it here
+process.env.NODE_ENV = 'test'
+
+// Also set React's internal __DEV__ flag if it exists
+if (typeof global !== 'undefined') {
+  global.__DEV__ = true;
+}
+
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
   useRouter() {

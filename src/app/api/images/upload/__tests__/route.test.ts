@@ -8,17 +8,14 @@ jest.mock('@/lib/db', () => ({
 }));
 
 // Mock fs operations - ensure they never actually access the file system
+// Use factory functions that return jest mocks directly
 jest.mock('fs/promises', () => ({
-  writeFile: jest.fn().mockResolvedValue(undefined),
-  mkdir: jest.fn().mockResolvedValue(undefined),
+  writeFile: jest.fn(() => Promise.resolve()),
+  mkdir: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('fs', () => ({
-  existsSync: jest.fn().mockReturnValue(true),
-  promises: {
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    mkdir: jest.fn().mockResolvedValue(undefined),
-  },
+  existsSync: jest.fn(() => true),
 }));
 
 // Mock crypto
@@ -31,17 +28,46 @@ jest.mock('path', () => ({
   join: jest.fn((...args) => args.join('/').replace(/\/+/g, '/')),
 }));
 
+// Mock process.cwd to return a test directory
+const originalCwd = process.cwd;
+beforeAll(() => {
+  Object.defineProperty(process, 'cwd', {
+    value: () => '/tmp/test-build',
+    writable: true,
+    configurable: true,
+  });
+});
+
+afterAll(() => {
+  Object.defineProperty(process, 'cwd', {
+    value: originalCwd,
+    writable: true,
+    configurable: true,
+  });
+});
+
 import { POST } from '../route';
 import { NextRequest } from 'next/server';
 import { authenticateRequest } from '@/lib/middleware';
 import { query } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
 
-// Suppress console.error for test runs to avoid noise from expected errors in CI
+// Spy on fs modules after imports to ensure mocks work
+import * as fsPromises from 'fs/promises';
+import * as fs from 'fs';
+
+// Replace the actual implementations with mocks
+jest.spyOn(fsPromises, 'writeFile').mockResolvedValue(undefined);
+jest.spyOn(fsPromises, 'mkdir').mockResolvedValue(undefined);
+jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+
+// Capture console.error to see actual errors during debugging
 const originalConsoleError = console.error;
+const errorLogs: any[] = [];
 beforeAll(() => {
-  console.error = jest.fn();
+  console.error = jest.fn((...args) => {
+    errorLogs.push(args);
+    originalConsoleError(...args);
+  });
 });
 
 afterAll(() => {
@@ -65,10 +91,10 @@ function createMockFile(name: string, type: string, size: number = 1024): File {
 describe('POST /api/images/upload', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Ensure existsSync always returns true to prevent directory creation attempts
-    (existsSync as jest.Mock).mockReturnValue(true);
-    // Note: writeFile and mkdir are already mocked at the module level
-    // so they won't actually access the file system
+    // Reset mocks to default behavior using spies
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
+    (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+    (fsPromises.mkdir as jest.Mock).mockResolvedValue(undefined);
   });
 
   it('uploads image successfully', async () => {
@@ -104,6 +130,9 @@ describe('POST /api/images/upload', () => {
     const response = await POST(request);
     const data = await response.json();
 
+    if (response.status !== 201) {
+      console.log('Error response:', data);
+    }
     expect(response.status).toBe(201);
     expect(data).toHaveProperty('id', 'image-1');
     expect(data).toHaveProperty('imageUrl', '/uploads/test-uuid.jpg');
@@ -240,7 +269,7 @@ describe('POST /api/images/upload', () => {
     (authenticateRequest as jest.Mock).mockResolvedValueOnce({
       user: { userId: 'user-1', email: 'test@example.com', username: 'testuser' },
     });
-    (existsSync as jest.Mock).mockReturnValue(false); // Directory doesn't exist
+    (fs.existsSync as jest.Mock).mockReturnValueOnce(false); // Directory doesn't exist
     (query as jest.Mock)
       .mockResolvedValueOnce({ rows: [{ group_id: '00000000-0000-0000-0000-000000000001' }] }) // Check membership
       .mockResolvedValueOnce({ rows: [mockImage] }) // Insert image
