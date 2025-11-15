@@ -1,11 +1,4 @@
-import { POST } from '../route';
-import { NextRequest } from 'next/server';
-import { authenticateRequest } from '@/lib/middleware';
-import { query } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-
-// Mock the middleware and db
+// All mocks must be declared before any imports to ensure proper hoisting
 jest.mock('@/lib/middleware', () => ({
   authenticateRequest: jest.fn(),
 }));
@@ -14,14 +7,18 @@ jest.mock('@/lib/db', () => ({
   query: jest.fn(),
 }));
 
-// Mock fs operations
+// Mock fs operations - ensure they never actually access the file system
 jest.mock('fs/promises', () => ({
   writeFile: jest.fn().mockResolvedValue(undefined),
   mkdir: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('fs', () => ({
-  existsSync: jest.fn(),
+  existsSync: jest.fn().mockReturnValue(true),
+  promises: {
+    writeFile: jest.fn().mockResolvedValue(undefined),
+    mkdir: jest.fn().mockResolvedValue(undefined),
+  },
 }));
 
 // Mock crypto
@@ -29,14 +26,27 @@ jest.mock('crypto', () => ({
   randomUUID: jest.fn(() => 'test-uuid'),
 }));
 
-// Mock path and process
+// Mock path to return predictable paths that won't cause file system access
 jest.mock('path', () => ({
-  join: jest.fn((...args) => args.join('/')),
+  join: jest.fn((...args) => args.join('/').replace(/\/+/g, '/')),
 }));
 
-jest.mock('process', () => ({
-  cwd: jest.fn(() => '/test'),
-}));
+import { POST } from '../route';
+import { NextRequest } from 'next/server';
+import { authenticateRequest } from '@/lib/middleware';
+import { query } from '@/lib/db';
+import { writeFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
+
+// Suppress console.error for test runs to avoid noise from expected errors in CI
+const originalConsoleError = console.error;
+beforeAll(() => {
+  console.error = jest.fn();
+});
+
+afterAll(() => {
+  console.error = originalConsoleError;
+});
 
 // Helper to create a mock File with arrayBuffer
 function createMockFile(name: string, type: string, size: number = 1024): File {
@@ -55,7 +65,10 @@ function createMockFile(name: string, type: string, size: number = 1024): File {
 describe('POST /api/images/upload', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Ensure existsSync always returns true to prevent directory creation attempts
     (existsSync as jest.Mock).mockReturnValue(true);
+    // Note: writeFile and mkdir are already mocked at the module level
+    // so they won't actually access the file system
   });
 
   it('uploads image successfully', async () => {
@@ -95,7 +108,6 @@ describe('POST /api/images/upload', () => {
     expect(data).toHaveProperty('id', 'image-1');
     expect(data).toHaveProperty('imageUrl', '/uploads/test-uuid.jpg');
     expect(data).toHaveProperty('fileName', 'test.jpg');
-    // Note: writeFile is mocked but may not be called in test environment
   });
 
   it('rejects when no file provided', async () => {
@@ -244,7 +256,6 @@ describe('POST /api/images/upload', () => {
 
     expect(response.status).toBe(201);
     expect(data).toHaveProperty('id', 'image-1');
-    // Note: mkdir is mocked but may not be called in test environment
   });
 
   it('returns 401 when not authenticated', async () => {
@@ -268,4 +279,3 @@ describe('POST /api/images/upload', () => {
     expect(response.status).toBe(401);
   });
 });
-

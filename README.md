@@ -74,7 +74,14 @@ npm test:ci
 
 ## Deployment
 
-The application is configured for deployment on Vercel. Connect your GitHub repository to Vercel for automatic deployments.
+The application is configured for deployment on Vercel. See **[DEPLOYMENT.md](DEPLOYMENT.md)** for a complete deployment guide.
+
+### Quick Deployment Steps
+
+1. Push your code to GitHub
+2. Import your repository in [Vercel](https://vercel.com)
+3. Add all required environment variables (see `DEPLOYMENT.md`)
+4. Deploy!
 
 ### Build Process
 The build process automatically runs tests before building:
