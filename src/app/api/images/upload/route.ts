@@ -79,19 +79,35 @@ export async function POST(request: NextRequest) {
 
     // Verify user is a member of all groups
     if (groupIds.length > 0) {
-      const membershipCheck = await query(
-        `SELECT group_id FROM group_members
-         WHERE user_id = $1 AND group_id = ANY($2::uuid[])`,
-        [authUser.userId, groupIds]
-      );
+      try {
+        const membershipCheck = await query(
+          `SELECT group_id FROM group_members
+           WHERE user_id = $1 AND group_id = ANY($2::uuid[])`,
+          [authUser.userId, groupIds]
+        );
 
-      const memberGroupIds = membershipCheck.rows.map(row => row.group_id);
-      const invalidGroupIds = groupIds.filter(id => !memberGroupIds.includes(id));
+        // Extract group IDs and handle potential string/UUID conversion
+        const memberGroupIds = membershipCheck.rows.map(row => {
+          const groupId = row.group_id;
+          // Convert to string if it's not already (handles UUID type from PostgreSQL)
+          return typeof groupId === 'string' ? groupId : String(groupId);
+        });
+        
+        // Convert all input group IDs to strings for comparison
+        const groupIdsAsStrings = groupIds.map(id => String(id));
+        const invalidGroupIds = groupIdsAsStrings.filter(id => !memberGroupIds.includes(id));
 
-      if (invalidGroupIds.length > 0) {
+        if (invalidGroupIds.length > 0) {
+          return NextResponse.json(
+            { message: 'You are not a member of one or more specified groups' },
+            { status: 403 }
+          );
+        }
+      } catch (membershipError: any) {
+        console.error('Membership check error:', membershipError);
         return NextResponse.json(
-          { message: 'You are not a member of one or more specified groups' },
-          { status: 403 }
+          { message: 'Failed to verify group membership' },
+          { status: 500 }
         );
       }
     }
