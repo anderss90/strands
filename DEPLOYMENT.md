@@ -157,6 +157,17 @@ Before deploying, ensure your Supabase database schema is initialized:
 2. Run the schema from `supabase/schema.sql`
 3. Run RLS policies from `supabase/schema-rls-policies.sql`
 
+### Running Database Migrations
+
+If you've added new tables or changes to the schema:
+
+1. Go to **Supabase Dashboard → SQL Editor**
+2. Check if there are any migration files in `supabase/migrations/` folder
+3. Run any pending migrations in order (they are numbered)
+4. For example, if you see `001_add_image_comments.sql`, copy its contents and run it in SQL Editor
+
+**Important**: Always run migrations after deploying code changes that require new database tables or columns.
+
 ## Performance Optimization
 
 ### Connection Pooling
