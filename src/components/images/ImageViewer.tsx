@@ -127,9 +127,9 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
   const isOwner = user?.id === image.userId;
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-300">
+    <div className="fixed inset-0 bg-black z-50 flex flex-col animate-fade-in overflow-hidden">
+      {/* Header - Fixed at top */}
+      <div className="flex-shrink-0 flex items-center justify-between p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-300 z-10">
         <button
           onClick={handleClose}
           className="text-white p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-200 active:scale-95"
@@ -179,59 +179,59 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
         {!isOwner && <div className="w-[44px]" />}
       </div>
 
-      {/* Image */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden animate-scale-in min-h-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={image.imageUrl}
-          alt={image.fileName}
-          className="max-w-full max-h-full object-contain transition-transform duration-300"
-        />
-      </div>
+      {/* Scrollable Content Area - Everything scrolls together */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex flex-col">
+          {/* Image */}
+          <div className="flex-shrink-0 flex items-center justify-center min-h-[40vh] p-4 animate-scale-in">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={image.imageUrl}
+              alt={image.fileName}
+              className="max-w-full max-h-[70vh] object-contain transition-transform duration-300"
+            />
+          </div>
 
-      {/* Footer - Fixed at bottom */}
-      <div className="flex-shrink-0 bg-black/50 backdrop-blur-sm text-white text-sm transition-opacity duration-300 animate-slide-up flex flex-col">
-        {/* Image Info */}
-        <div className="flex-shrink-0 p-4 border-b border-white/10">
-          {image.groups && image.groups.length > 0 && (
-            <div className="mb-2">
-              <p className="text-gray-400 text-xs mb-1">Shared in:</p>
-              <div className="flex flex-wrap gap-1">
-                {image.groups.map((group) => (
-                  <span
-                    key={group.id}
-                    className="bg-blue-600 px-2 py-1 rounded text-xs"
-                  >
-                    {group.name}
-                  </span>
-                ))}
+          {/* Image Info */}
+          <div className="flex-shrink-0 p-4 bg-black/50 backdrop-blur-sm border-t border-white/10 text-white text-sm">
+            {image.groups && image.groups.length > 0 && (
+              <div className="mb-3">
+                <p className="text-gray-400 text-xs mb-1">Shared in:</p>
+                <div className="flex flex-wrap gap-1">
+                  {image.groups.map((group) => (
+                    <span
+                      key={group.id}
+                      className="bg-blue-600 px-2 py-1 rounded text-xs"
+                    >
+                      {group.name}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-          {image.user && (
-            <div className="flex items-center gap-2">
-              {image.user.profilePictureUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={image.user.profilePictureUrl}
-                  alt={image.user.displayName}
-                  className="w-6 h-6 rounded-full"
-                />
-              )}
-              <div>
-                <p className="font-medium">@{image.user.username}</p>
-                <p className="text-gray-400 text-xs">
-                  {new Date(image.createdAt).toLocaleDateString()}
-                </p>
+            )}
+            {image.user && (
+              <div className="flex items-center gap-2">
+                {image.user.profilePictureUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={image.user.profilePictureUrl}
+                    alt={image.user.displayName}
+                    className="w-6 h-6 rounded-full"
+                  />
+                )}
+                <div>
+                  <p className="font-medium">@{image.user.username}</p>
+                  <p className="text-gray-400 text-xs">
+                    {new Date(image.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Comments Section - Fixed height with scroll */}
-        <div className="flex-shrink-0 flex flex-col overflow-hidden" style={{ maxHeight: '40vh' }}>
-          {/* Comments List - Scrollable */}
-          <div className="overflow-y-auto p-4 space-y-3 min-h-0">
+          {/* Comments List - Part of scrollable content */}
+          <div className="flex-shrink-0 p-4 space-y-3 bg-black/50 backdrop-blur-sm text-white text-sm">
+            <h3 className="text-white font-medium mb-3">Comments</h3>
             {commentsLoading ? (
               <div className="text-center py-4">
                 <LoadingSpinner size="sm" className="text-white" />
@@ -267,32 +267,37 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
             )}
           </div>
 
-          {/* Comment Input - Always visible at bottom, outside scroll area */}
-          <form onSubmit={handleCommentSubmit} className="flex-shrink-0 p-4 border-t border-white/10 bg-black/70">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Write a comment..."
-                className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-h-[44px]"
-                maxLength={1000}
-                disabled={submittingComment}
-              />
-              <button
-                type="submit"
-                disabled={!commentText.trim() || submittingComment}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] transition-all duration-200"
-              >
-                {submittingComment ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  'Post'
-                )}
-              </button>
-            </div>
-          </form>
+          {/* Spacer to prevent content from being hidden behind comment input */}
+          <div className="h-24 flex-shrink-0" />
         </div>
+      </div>
+
+      {/* Comment Input - Fixed at bottom, always visible */}
+      <div className="flex-shrink-0 bg-black/70 backdrop-blur-sm border-t border-white/10 p-4 text-white">
+        <form onSubmit={handleCommentSubmit}>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write a comment..."
+              className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-h-[44px]"
+              maxLength={1000}
+              disabled={submittingComment}
+            />
+            <button
+              type="submit"
+              disabled={!commentText.trim() || submittingComment}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] transition-all duration-200"
+            >
+              {submittingComment ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                'Post'
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
