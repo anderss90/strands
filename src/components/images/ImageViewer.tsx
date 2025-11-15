@@ -180,7 +180,7 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
       </div>
 
       {/* Image */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden animate-scale-in">
+      <div className="flex-1 flex items-center justify-center overflow-hidden animate-scale-in min-h-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={image.imageUrl}
@@ -189,8 +189,8 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
         />
       </div>
 
-      {/* Footer */}
-      <div className="bg-black/50 backdrop-blur-sm text-white text-sm transition-opacity duration-300 animate-slide-up flex flex-col max-h-[50vh] min-h-0">
+      {/* Footer - Fixed at bottom */}
+      <div className="flex-shrink-0 bg-black/50 backdrop-blur-sm text-white text-sm transition-opacity duration-300 animate-slide-up flex flex-col">
         {/* Image Info */}
         <div className="flex-shrink-0 p-4 border-b border-white/10">
           {image.groups && image.groups.length > 0 && (
@@ -228,10 +228,10 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
           )}
         </div>
 
-        {/* Comments Section */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Comments Section - Fixed height with scroll */}
+        <div className="flex-shrink-0 flex flex-col overflow-hidden" style={{ maxHeight: '40vh' }}>
           {/* Comments List - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          <div className="overflow-y-auto p-4 space-y-3 min-h-0">
             {commentsLoading ? (
               <div className="text-center py-4">
                 <LoadingSpinner size="sm" className="text-white" />
@@ -267,8 +267,8 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
             )}
           </div>
 
-          {/* Comment Input - Always visible at bottom */}
-          <form onSubmit={handleCommentSubmit} className="flex-shrink-0 p-4 border-t border-white/10 bg-black/50">
+          {/* Comment Input - Always visible at bottom, outside scroll area */}
+          <form onSubmit={handleCommentSubmit} className="flex-shrink-0 p-4 border-t border-white/10 bg-black/70">
             <div className="flex gap-2">
               <input
                 type="text"
