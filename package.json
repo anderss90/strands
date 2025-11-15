@@ -13,7 +13,8 @@
     "test:ci": "cross-env NODE_ENV=test jest --ci --coverage --maxWorkers=2",
     "check-setup": "node check-setup.js",
     "generate-secrets": "node generate-jwt-secrets.js",
-    "init-db": "node scripts/init-database.js"
+    "init-db": "node scripts/init-database.js",
+    "set-admin": "node scripts/set-admin.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.3",

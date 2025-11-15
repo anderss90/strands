@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   display_name VARCHAR(100) NOT NULL,
   profile_picture_url TEXT,
+  is_admin BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -92,6 +93,7 @@ CREATE INDEX IF NOT EXISTS idx_images_user_id ON images(user_id);
 CREATE INDEX IF NOT EXISTS idx_images_created_at ON images(created_at);
 CREATE INDEX IF NOT EXISTS idx_image_group_shares_image_id ON image_group_shares(image_id);
 CREATE INDEX IF NOT EXISTS idx_image_group_shares_group_id ON image_group_shares(group_id);
+CREATE INDEX IF NOT EXISTS idx_users_is_admin ON users(is_admin) WHERE is_admin = true;
 CREATE INDEX IF NOT EXISTS idx_image_comments_image_id ON image_comments(image_id);
 CREATE INDEX IF NOT EXISTS idx_image_comments_user_id ON image_comments(user_id);
 CREATE INDEX IF NOT EXISTS idx_image_comments_created_at ON image_comments(created_at);

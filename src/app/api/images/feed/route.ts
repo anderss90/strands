@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
 
     // Get pagination parameters
     let limit = 20;
@@ -34,18 +34,28 @@ export async function GET(request: NextRequest) {
       offset = 0;
     }
 
-    // Get images shared in groups the user is a member of
-    // First get distinct image IDs with created_at for ordering, then fetch full details
-    const imageIdsResult = await query(
-      `SELECT DISTINCT i.id, i.created_at
-       FROM images i
-       INNER JOIN image_group_shares igs ON i.id = igs.image_id
-       INNER JOIN group_members gm ON igs.group_id = gm.group_id
-       WHERE gm.user_id = $1
-       ORDER BY i.created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [authUser.userId, limit, offset]
-    );
+    // If admin, get all images. Otherwise, get images shared in groups the user is a member of
+    let imageIdsResult;
+    if (authUser.isAdmin) {
+      imageIdsResult = await query(
+        `SELECT DISTINCT i.id, i.created_at
+         FROM images i
+         ORDER BY i.created_at DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+    } else {
+      imageIdsResult = await query(
+        `SELECT DISTINCT i.id, i.created_at
+         FROM images i
+         INNER JOIN image_group_shares igs ON i.id = igs.image_id
+         INNER JOIN group_members gm ON igs.group_id = gm.group_id
+         WHERE gm.user_id = $1
+         ORDER BY i.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [authUser.userId, limit, offset]
+      );
+    }
 
     if (imageIdsResult.rows.length === 0) {
       return NextResponse.json({

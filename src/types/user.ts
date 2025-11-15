@@ -5,6 +5,7 @@ export interface User {
   password_hash?: string; // Optional, should be excluded when returning to client
   display_name: string;
   profile_picture_url: string | null;
+  is_admin?: boolean; // Optional, admin status
   created_at: string;
   updated_at: string;
 }

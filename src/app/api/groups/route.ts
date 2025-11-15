@@ -19,24 +19,42 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
 
-    // Get all groups where user is a member
-    const result = await query(
-      `SELECT 
-        g.id,
-        g.name,
-        g.created_by,
-        g.created_at,
-        g.updated_at,
-        gm.role as user_role,
-        gm.joined_at
-      FROM groups g
-      INNER JOIN group_members gm ON g.id = gm.group_id
-      WHERE gm.user_id = $1
-      ORDER BY g.created_at DESC`,
-      [authUser.userId]
-    );
+    // If admin, get all groups. Otherwise, get only groups where user is a member
+    let result;
+    if (authUser.isAdmin) {
+      result = await query(
+        `SELECT 
+          g.id,
+          g.name,
+          g.created_by,
+          g.created_at,
+          g.updated_at,
+          COALESCE(gm.role, 'non_member') as user_role,
+          gm.joined_at
+        FROM groups g
+        LEFT JOIN group_members gm ON g.id = gm.group_id AND gm.user_id = $1
+        ORDER BY g.created_at DESC`,
+        [authUser.userId]
+      );
+    } else {
+      result = await query(
+        `SELECT 
+          g.id,
+          g.name,
+          g.created_by,
+          g.created_at,
+          g.updated_at,
+          gm.role as user_role,
+          gm.joined_at
+        FROM groups g
+        INNER JOIN group_members gm ON g.id = gm.group_id
+        WHERE gm.user_id = $1
+        ORDER BY g.created_at DESC`,
+        [authUser.userId]
+      );
+    }
 
     const groups = result.rows.map(row => ({
       id: row.id,

@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken } from './auth';
+import { query } from './db';
 
 export interface AuthenticatedRequest extends NextRequest {
   user?: {
     userId: string;
     email: string;
     username: string;
+    isAdmin: boolean;
   };
 }
 
 // Authentication middleware
 export async function authenticateRequest(
   request: NextRequest
-): Promise<{ user: { userId: string; email: string; username: string } } | NextResponse> {
+): Promise<{ user: { userId: string; email: string; username: string; isAdmin: boolean } } | NextResponse> {
   try {
     const authHeader = request.headers.get('authorization');
     
@@ -27,7 +29,21 @@ export async function authenticateRequest(
     
     try {
       const payload = verifyAccessToken(token);
-      return { user: payload };
+      
+      // Fetch admin status from database
+      const userResult = await query(
+        'SELECT is_admin FROM users WHERE id = $1',
+        [payload.userId]
+      );
+      
+      const isAdmin = userResult.rows.length > 0 ? (userResult.rows[0].is_admin === true) : false;
+      
+      return { 
+        user: {
+          ...payload,
+          isAdmin
+        }
+      };
     } catch (error) {
       return NextResponse.json(
         { message: 'Invalid or expired token' },
@@ -52,4 +68,3 @@ export async function getAuthenticatedUser(request: NextRequest) {
   
   return authResult.user;
 }
-

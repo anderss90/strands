@@ -21,21 +21,23 @@ export async function GET(
       );
     }
 
-    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
     const groupId = params.groupId;
 
-    // Verify user is a member of the group
-    const membershipCheck = await query(
-      `SELECT role FROM group_members
-       WHERE group_id = $1 AND user_id = $2`,
-      [groupId, authUser.userId]
-    );
-
-    if (membershipCheck.rows.length === 0) {
-      return NextResponse.json(
-        { message: 'Group not found or access denied' },
-        { status: 404 }
+    // If not admin, verify user is a member of the group
+    if (!authUser.isAdmin) {
+      const membershipCheck = await query(
+        `SELECT role FROM group_members
+         WHERE group_id = $1 AND user_id = $2`,
+        [groupId, authUser.userId]
       );
+
+      if (membershipCheck.rows.length === 0) {
+        return NextResponse.json(
+          { message: 'Group not found or access denied' },
+          { status: 404 }
+        );
+      }
     }
 
     // Get pagination parameters

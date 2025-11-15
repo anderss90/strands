@@ -21,25 +21,27 @@ export async function GET(
       );
     }
 
-    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
     const imageId = params.id;
 
-    // Verify user has access to the image (must be shared in a group user is a member of)
-    const accessCheck = await query(
-      `SELECT 1
-       FROM images i
-       INNER JOIN image_group_shares igs ON i.id = igs.image_id
-       INNER JOIN group_members gm ON igs.group_id = gm.group_id
-       WHERE i.id = $1 AND gm.user_id = $2
-       LIMIT 1`,
-      [imageId, authUser.userId]
-    );
-
-    if (accessCheck.rows.length === 0) {
-      return NextResponse.json(
-        { message: 'Image not found or access denied' },
-        { status: 404 }
+    // If not admin, verify user has access to the image (must be shared in a group user is a member of)
+    if (!authUser.isAdmin) {
+      const accessCheck = await query(
+        `SELECT 1
+         FROM images i
+         INNER JOIN image_group_shares igs ON i.id = igs.image_id
+         INNER JOIN group_members gm ON igs.group_id = gm.group_id
+         WHERE i.id = $1 AND gm.user_id = $2
+         LIMIT 1`,
+        [imageId, authUser.userId]
       );
+
+      if (accessCheck.rows.length === 0) {
+        return NextResponse.json(
+          { message: 'Image not found or access denied' },
+          { status: 404 }
+        );
+      }
     }
 
     // Get all comments for the image, ordered by created_at ASC (oldest first)
@@ -103,25 +105,27 @@ export async function POST(
       );
     }
 
-    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
     const imageId = params.id;
 
-    // Verify user has access to the image
-    const accessCheck = await query(
-      `SELECT 1
-       FROM images i
-       INNER JOIN image_group_shares igs ON i.id = igs.image_id
-       INNER JOIN group_members gm ON igs.group_id = gm.group_id
-       WHERE i.id = $1 AND gm.user_id = $2
-       LIMIT 1`,
-      [imageId, authUser.userId]
-    );
-
-    if (accessCheck.rows.length === 0) {
-      return NextResponse.json(
-        { message: 'Image not found or access denied' },
-        { status: 404 }
+    // If not admin, verify user has access to the image
+    if (!authUser.isAdmin) {
+      const accessCheck = await query(
+        `SELECT 1
+         FROM images i
+         INNER JOIN image_group_shares igs ON i.id = igs.image_id
+         INNER JOIN group_members gm ON igs.group_id = gm.group_id
+         WHERE i.id = $1 AND gm.user_id = $2
+         LIMIT 1`,
+        [imageId, authUser.userId]
       );
+
+      if (accessCheck.rows.length === 0) {
+        return NextResponse.json(
+          { message: 'Image not found or access denied' },
+          { status: 404 }
+        );
+      }
     }
 
     // Parse request body
