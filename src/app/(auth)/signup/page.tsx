@@ -7,6 +7,7 @@ export default function SignUpPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Strands</h1>
+          <p className="text-lg text-gray-700 mb-2 font-medium">The first strand type group chat app</p>
           <p className="text-gray-600">Create your account</p>
         </div>
 
