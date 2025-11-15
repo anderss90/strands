@@ -192,8 +192,36 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
             />
           </div>
 
+          {/* Comment Input - Right below the image */}
+          <div className="flex-shrink-0 bg-black/70 backdrop-blur-sm border-y border-white/10 p-4 text-white">
+            <form onSubmit={handleCommentSubmit}>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Write a comment..."
+                  className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-h-[44px]"
+                  maxLength={1000}
+                  disabled={submittingComment}
+                />
+                <button
+                  type="submit"
+                  disabled={!commentText.trim() || submittingComment}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] transition-all duration-200"
+                >
+                  {submittingComment ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Post'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+
           {/* Image Info */}
-          <div className="flex-shrink-0 p-4 bg-black/50 backdrop-blur-sm border-t border-white/10 text-white text-sm">
+          <div className="flex-shrink-0 p-4 bg-black/50 backdrop-blur-sm border-b border-white/10 text-white text-sm">
             {image.groups && image.groups.length > 0 && (
               <div className="mb-3">
                 <p className="text-gray-400 text-xs mb-1">Shared in:</p>
@@ -266,38 +294,7 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
               ))
             )}
           </div>
-
-          {/* Spacer to prevent content from being hidden behind comment input */}
-          <div className="h-24 flex-shrink-0" />
         </div>
-      </div>
-
-      {/* Comment Input - Fixed at bottom, always visible */}
-      <div className="flex-shrink-0 bg-black/70 backdrop-blur-sm border-t border-white/10 p-4 text-white">
-        <form onSubmit={handleCommentSubmit}>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Write a comment..."
-              className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-h-[44px]"
-              maxLength={1000}
-              disabled={submittingComment}
-            />
-            <button
-              type="submit"
-              disabled={!commentText.trim() || submittingComment}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] transition-all duration-200"
-            >
-              {submittingComment ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                'Post'
-              )}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
