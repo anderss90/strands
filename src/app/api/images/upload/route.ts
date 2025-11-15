@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/middleware';
 import { query } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { createServerSupabase } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
 import { uploadImageSchema } from '@/lib/validation';
 
@@ -117,19 +115,31 @@ export async function POST(request: NextRequest) {
     const fileName = `${randomUUID()}.${fileExtension}`;
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
+    // Upload to Supabase Storage
+    const supabase = createServerSupabase();
+    const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'images';
+    
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(storageBucket)
+      .upload(fileName, fileBuffer, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('Supabase Storage upload error:', uploadError);
+      return NextResponse.json(
+        { message: 'Failed to upload image to storage' },
+        { status: 500 }
+      );
     }
 
-    // Save file to public/uploads directory
-    // In production, this would upload to Supabase Storage or similar
-    const filePath = join(uploadsDir, fileName);
-    await writeFile(filePath, fileBuffer);
+    // Get public URL for the uploaded image
+    const { data: urlData } = supabase.storage
+      .from(storageBucket)
+      .getPublicUrl(fileName);
 
-    // Generate URLs
-    const imageUrl = `/uploads/${fileName}`;
+    const imageUrl = urlData.publicUrl;
     // For now, thumbnail is the same as image
     // In production, generate a thumbnail using sharp or similar
     const thumbnailUrl = imageUrl;
