@@ -40,8 +40,8 @@ export async function apiRequest<T>(
 
 // Auth API functions
 export const authApi = {
-  signup: async (data: { username: string; password: string }) => {
-    return apiRequest<{ user: any; tokens: { accessToken: string; refreshToken: string } }>('/api/auth/signup', {
+  signup: async (data: { username: string; password: string; inviteToken?: string }) => {
+    return apiRequest<{ user: any; tokens: { accessToken: string; refreshToken: string }; groupId?: string }>('/api/auth/signup', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -234,6 +234,35 @@ export const groupApi = {
 
   leaveGroup: async (groupId: string) => {
     return apiRequest<{ message: string }>(`/api/groups/${groupId}/leave`, {
+      method: 'POST',
+    });
+  },
+
+  createInvite: async (groupId: string) => {
+    return apiRequest<{
+      id: string;
+      token: string;
+      inviteUrl: string;
+      expiresAt: string;
+      createdAt: string;
+    }>(`/api/groups/${groupId}/invite`, {
+      method: 'POST',
+    });
+  },
+
+  getInviteInfo: async (token: string) => {
+    return apiRequest<{
+      groupId: string;
+      groupName: string;
+      expiresAt: string;
+    }>(`/api/groups/invite/${token}`);
+  },
+
+  joinGroupViaInvite: async (token: string) => {
+    return apiRequest<{
+      message: string;
+      groupId: string;
+    }>(`/api/groups/invite/${token}/join`, {
       method: 'POST',
     });
   },

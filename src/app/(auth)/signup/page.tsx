@@ -1,7 +1,14 @@
+'use client';
+
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import SignUpForm from '@/components/auth/SignUpForm';
 
-export default function SignUpPage() {
+function SignUpPageContent() {
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get('inviteToken') || undefined;
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-gray-900">
       <div className="w-full max-w-md">
@@ -12,7 +19,7 @@ export default function SignUpPage() {
         </div>
 
         <div className="bg-gray-800 rounded-lg shadow-sm p-8 border border-gray-700">
-          <SignUpForm />
+          <SignUpForm inviteToken={inviteToken} />
         </div>
 
         <div className="mt-6 text-center">
@@ -25,6 +32,18 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    }>
+      <SignUpPageContent />
+    </Suspense>
   );
 }
 

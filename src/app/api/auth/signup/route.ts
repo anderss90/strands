@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { signUpSchema } from '@/lib/validation';
 import { createUser, getUserByUsername, generateTokens } from '@/lib/auth';
+import { query } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,6 +26,34 @@ export async function POST(request: NextRequest) {
     // Generate tokens
     const tokens = generateTokens(user);
 
+    // Handle invite token if provided
+    let groupId: string | null = null;
+    if (validatedData.inviteToken) {
+      try {
+        // Validate token (exists and not expired)
+        const inviteResult = await query(
+          `SELECT group_id FROM group_invites
+           WHERE token = $1 AND expires_at > NOW()`,
+          [validatedData.inviteToken]
+        );
+
+        if (inviteResult.rows.length > 0) {
+          groupId = inviteResult.rows[0].group_id;
+
+          // Add user to group (ignore if already member, which shouldn't happen for new users)
+          await query(
+            `INSERT INTO group_members (group_id, user_id, role)
+             VALUES ($1, $2, 'member')
+             ON CONFLICT (group_id, user_id) DO NOTHING`,
+            [groupId, user.id]
+          );
+        }
+      } catch (inviteError) {
+        // Log error but don't fail signup if invite processing fails
+        console.error('Error processing invite token:', inviteError);
+      }
+    }
+
     // Remove password hash from response
     const { password_hash: _, ...userWithoutPassword } = user;
 
@@ -32,6 +61,7 @@ export async function POST(request: NextRequest) {
       {
         user: userWithoutPassword,
         tokens,
+        groupId, // Include groupId if user was added via invite
       },
       { status: 201 }
     );

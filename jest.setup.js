@@ -11,6 +11,13 @@ if (typeof global !== 'undefined') {
   global.__DEV__ = true;
 }
 
+// Polyfill TextEncoder/TextDecoder for Node.js test environment
+if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util');
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}
+
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
   useRouter() {

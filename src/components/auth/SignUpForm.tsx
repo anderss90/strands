@@ -4,7 +4,11 @@ import { useState, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
-export default function SignUpForm() {
+interface SignUpFormProps {
+  inviteToken?: string;
+}
+
+export default function SignUpForm({ inviteToken }: SignUpFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -30,8 +34,13 @@ export default function SignUpForm() {
     setLoading(true);
 
     try {
-      await signup(username, password);
-      router.push('/home');
+      const result = await signup(username, password, inviteToken);
+      // If user was added to a group via invite, redirect to that group
+      if (result.groupId) {
+        router.push(`/groups/${result.groupId}`);
+      } else {
+        router.push('/home');
+      }
     } catch (err: any) {
       setError(err.message || 'Signup failed. Please try again.');
     } finally {

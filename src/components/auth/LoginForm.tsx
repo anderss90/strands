@@ -3,8 +3,13 @@
 import { useState, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { groupApi } from '@/lib/api';
 
-export default function LoginForm() {
+interface LoginFormProps {
+  inviteToken?: string;
+}
+
+export default function LoginForm({ inviteToken }: LoginFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,7 +24,20 @@ export default function LoginForm() {
 
     try {
       await login(username, password);
-      router.push('/home');
+      
+      // If there's an invite token, join the group
+      if (inviteToken) {
+        try {
+          const result = await groupApi.joinGroupViaInvite(inviteToken);
+          router.push(`/groups/${result.groupId}`);
+        } catch (inviteErr: any) {
+          // If join fails, still redirect to home
+          console.error('Failed to join group via invite:', inviteErr);
+          router.push('/home');
+        }
+      } else {
+        router.push('/home');
+      }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {

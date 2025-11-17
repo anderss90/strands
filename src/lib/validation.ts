@@ -4,6 +4,7 @@ import { z } from 'zod';
 export const signUpSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username must be less than 50 characters'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
+  inviteToken: z.string().optional(),
 });
 
 export const loginSchema = z.object({
@@ -67,6 +68,9 @@ export const pinStrandSchema = z.object({
 export const searchSchema = z.object({
   q: z.string().min(1, 'Search query is required').max(100, 'Search query must be less than 100 characters'),
 });
+
+// Invite validation schemas
+export const inviteTokenSchema = z.string().min(1, 'Invite token is required').max(255, 'Invalid invite token');
 
 // Type exports
 export type SignUpInput = z.infer<typeof signUpSchema>;

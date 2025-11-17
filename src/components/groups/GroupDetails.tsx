@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { groupApi, GroupWithMembers } from '@/lib/api';
 import StrandFeed from '@/components/strands/StrandFeed';
 import StrandViewer from '@/components/strands/StrandViewer';
+import ShareGroupModal from '@/components/groups/ShareGroupModal';
 
 interface GroupDetailsProps {
   groupId: string;
@@ -18,6 +19,7 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
   const [leaving, setLeaving] = useState(false);
   const [selectedStrandId, setSelectedStrandId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pinned'>('all');
+  const [showShareModal, setShowShareModal] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -189,6 +191,12 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
 
       <div className="space-y-2">
         <button
+          onClick={() => setShowShareModal(true)}
+          className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-base min-h-[48px] transition-all duration-200 shadow-md hover:shadow-lg"
+        >
+          Share Group
+        </button>
+        <button
           onClick={() => router.push(`/groups/${groupId}/add-members`)}
           className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-base min-h-[48px] transition-all duration-200 shadow-md hover:shadow-lg"
         >
@@ -209,6 +217,13 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
           )}
         </button>
       </div>
+
+      {showShareModal && (
+        <ShareGroupModal
+          groupId={groupId}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
 
       {selectedStrandId && (
         <StrandViewer

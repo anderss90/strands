@@ -17,7 +17,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  signup: (username: string, password: string) => Promise<void>;
+  signup: (username: string, password: string, inviteToken?: string) => Promise<{ groupId?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -75,12 +75,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signup = async (username: string, password: string) => {
+  const signup = async (username: string, password: string, inviteToken?: string) => {
     try {
-      const response = await authApi.signup({ username, password });
+      const response = await authApi.signup({ username, password, inviteToken });
       localStorage.setItem('accessToken', response.tokens.accessToken);
       localStorage.setItem('refreshToken', response.tokens.refreshToken);
       setUser(response.user);
+      return { groupId: response.groupId };
     } catch (error: any) {
       throw new Error(error.message || 'Signup failed');
     }
