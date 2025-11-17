@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Strand } from '@/types/strand';
 import StrandCard from './StrandCard';
-import PullToRefresh from '@/components/common/PullToRefresh';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Skeleton from '@/components/common/Skeleton';
 
@@ -93,10 +92,6 @@ export default function StrandFeed({ groupId, pinnedOnly = false, onStrandClick 
     }
   };
 
-  const handleRefresh = async () => {
-    await fetchStrands(true);
-  };
-
   if (loading) {
     return (
       <div className="space-y-4 animate-fade-in">
@@ -131,50 +126,48 @@ export default function StrandFeed({ groupId, pinnedOnly = false, onStrandClick 
   }
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
-      <div className="space-y-4 animate-fade-in">
-        <div className="grid grid-cols-1 gap-4">
-          {strands.map((strand, index) => (
-            <div
-              key={strand.id}
-              style={{
-                animationDelay: `${index * 0.05}s`,
-                animationFillMode: 'both',
+    <div className="space-y-4 animate-fade-in">
+      <div className="grid grid-cols-1 gap-4">
+        {strands.map((strand, index) => (
+          <div
+            key={strand.id}
+            style={{
+              animationDelay: `${index * 0.05}s`,
+              animationFillMode: 'both',
+            }}
+          >
+            <StrandCard
+              strand={strand}
+              onClick={() => {
+                if (onStrandClick) {
+                  onStrandClick(strand.id);
+                } else {
+                  router.push(`/strands/${strand.id}`);
+                }
               }}
-            >
-              <StrandCard
-                strand={strand}
-                onClick={() => {
-                  if (onStrandClick) {
-                    onStrandClick(strand.id);
-                  } else {
-                    router.push(`/strands/${strand.id}`);
-                  }
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
-        {hasMore && (
-          <div className="text-center py-4 animate-slide-up">
-            <button
-              onClick={handleLoadMore}
-              disabled={loadingMore}
-              className="bg-gray-700 text-gray-100 py-3 px-6 rounded-lg font-medium hover:bg-gray-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] transition-all duration-200"
-            >
-              {loadingMore ? (
-                <span className="flex items-center justify-center gap-2">
-                  <LoadingSpinner size="sm" />
-                  Loading...
-                </span>
-              ) : (
-                'Load More'
-              )}
-            </button>
+            />
           </div>
-        )}
+        ))}
       </div>
-    </PullToRefresh>
+
+      {hasMore && (
+        <div className="text-center py-4 animate-slide-up">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="bg-gray-700 text-gray-100 py-3 px-6 rounded-lg font-medium hover:bg-gray-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] transition-all duration-200"
+          >
+            {loadingMore ? (
+              <span className="flex items-center justify-center gap-2">
+                <LoadingSpinner size="sm" />
+                Loading...
+              </span>
+            ) : (
+              'Load More'
+            )}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
