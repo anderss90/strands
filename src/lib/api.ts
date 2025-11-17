@@ -29,9 +29,24 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
+    // Handle 401 Unauthorized - redirect to login
+    if (response.status === 401 && typeof window !== 'undefined') {
+      // Clear tokens
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      
+      // Redirect to login page (avoid redirect if already on login/signup page)
+      const currentPath = window.location.pathname;
+      if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
+        window.location.href = '/login';
+      }
+    }
+
     const error: ApiError = await response.json().catch(() => ({
       message: 'An error occurred',
+      statusCode: response.status,
     }));
+    error.statusCode = response.status;
     throw error;
   }
 
@@ -319,6 +334,15 @@ export const imageApi = {
     });
 
     if (!response.ok) {
+      // Handle 401 Unauthorized - redirect to login
+      if (response.status === 401 && typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        const currentPath = window.location.pathname;
+        if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
+          window.location.href = '/login';
+        }
+      }
       const error = await response.json().catch(() => ({ message: 'Upload failed' }));
       throw error;
     }
@@ -414,6 +438,15 @@ export const strandApi = {
     });
 
     if (!response.ok) {
+      // Handle 401 Unauthorized - redirect to login
+      if (response.status === 401 && typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        const currentPath = window.location.pathname;
+        if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
+          window.location.href = '/login';
+        }
+      }
       const error = await response.json().catch(() => ({ message: 'Failed to create strand' }));
       throw error;
     }
@@ -447,6 +480,15 @@ export const strandApi = {
     });
 
     if (!response.ok) {
+      // Handle 401 Unauthorized - redirect to login
+      if (response.status === 401 && typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        const currentPath = window.location.pathname;
+        if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
+          window.location.href = '/login';
+        }
+      }
       const error = await response.json().catch(() => ({ message: 'Failed to update strand' }));
       throw error;
     }
