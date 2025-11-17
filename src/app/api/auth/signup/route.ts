@@ -41,16 +41,39 @@ export async function POST(request: NextRequest) {
           groupId = inviteResult.rows[0].group_id;
 
           // Add user to group (ignore if already member, which shouldn't happen for new users)
-          await query(
+          const insertResult = await query(
             `INSERT INTO group_members (group_id, user_id, role)
              VALUES ($1, $2, 'member')
-             ON CONFLICT (group_id, user_id) DO NOTHING`,
+             ON CONFLICT (group_id, user_id) DO NOTHING
+             RETURNING group_id`,
             [groupId, user.id]
           );
+
+          // Verify the user was added (check if insert actually happened)
+          if (insertResult.rows.length === 0) {
+            // Check if user is already a member (shouldn't happen for new users, but verify)
+            const memberCheck = await query(
+              `SELECT group_id FROM group_members
+               WHERE group_id = $1 AND user_id = $2`,
+              [groupId, user.id]
+            );
+            
+            if (memberCheck.rows.length === 0) {
+              console.error('Failed to add user to group via invite token');
+            } else {
+              console.log('User already a member of group (unexpected for new user)');
+            }
+          } else {
+            console.log(`Successfully added user ${user.id} to group ${groupId} via invite token`);
+          }
+        } else {
+          console.warn(`Invite token not found or expired: ${validatedData.inviteToken}`);
         }
-      } catch (inviteError) {
+      } catch (inviteError: any) {
         // Log error but don't fail signup if invite processing fails
         console.error('Error processing invite token:', inviteError);
+        console.error('Invite token:', validatedData.inviteToken);
+        console.error('User ID:', user.id);
       }
     }
 
