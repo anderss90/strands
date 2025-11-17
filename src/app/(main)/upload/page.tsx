@@ -1,9 +1,38 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, Suspense } from 'react';
 import StrandCreate from '@/components/strands/StrandCreate';
+
+function UploadPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const groupId = searchParams.get('groupId');
+
+  const handleSuccess = () => {
+    if (groupId) {
+      router.push(`/groups/${groupId}`);
+    } else {
+      router.push('/home');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="max-w-2xl mx-auto p-4">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Strand</h1>
+          <p className="text-gray-600 text-sm">Share text, images, or both with your groups.</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <StrandCreate onSuccess={handleSuccess} preselectedGroupId={groupId || undefined} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function UploadPage() {
   const { isAuthenticated, loading } = useAuth();
@@ -23,23 +52,14 @@ export default function UploadPage() {
     );
   }
 
-  const handleSuccess = () => {
-    router.push('/home');
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="max-w-2xl mx-auto p-4">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Strand</h1>
-          <p className="text-gray-600 text-sm">Share text, images, or both with your groups.</p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <StrandCreate onSuccess={handleSuccess} />
-        </div>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
       </div>
-    </div>
+    }>
+      <UploadPageContent />
+    </Suspense>
   );
 }
 

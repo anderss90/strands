@@ -98,6 +98,13 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
         </p>
       </div>
 
+      <button
+        onClick={() => router.push(`/upload?groupId=${groupId}`)}
+        className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-base min-h-[48px] transition-all duration-200 shadow-md hover:shadow-lg"
+      >
+        + Create Strand
+      </button>
+
       <div className="bg-white rounded-lg shadow-sm p-4">
         <h3 className="font-medium text-gray-900 mb-3">Members</h3>
         {group.members && group.members.length > 0 ? (
@@ -149,9 +156,7 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium text-gray-900">Strands</h3>
-        </div>
+        <h3 className="font-medium text-gray-900 mb-3">Strands</h3>
         {/* Tabs */}
         <div className="flex gap-2 mb-4 border-b border-gray-200">
           <button

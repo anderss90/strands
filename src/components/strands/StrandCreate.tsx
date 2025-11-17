@@ -6,9 +6,10 @@ import { groupApi, Group } from '@/lib/api';
 
 interface StrandCreateProps {
   onSuccess?: () => void;
+  preselectedGroupId?: string;
 }
 
-export default function StrandCreate({ onSuccess }: StrandCreateProps) {
+export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCreateProps) {
   const [content, setContent] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -26,6 +27,17 @@ export default function StrandCreate({ onSuccess }: StrandCreateProps) {
     fetchGroups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // Pre-select the group if provided and groups are loaded
+    if (preselectedGroupId && groups.length > 0 && selectedGroupIds.length === 0) {
+      const groupExists = groups.some(g => g.id === preselectedGroupId);
+      if (groupExists) {
+        setSelectedGroupIds([preselectedGroupId]);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectedGroupId, groups]);
 
   const fetchGroups = async () => {
     try {
