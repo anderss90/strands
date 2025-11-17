@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { groupApi, GroupWithMembers } from '@/lib/api';
-import ImageFeed from '@/components/images/ImageFeed';
-import ImageViewer from '@/components/images/ImageViewer';
+import StrandFeed from '@/components/strands/StrandFeed';
+import StrandViewer from '@/components/strands/StrandViewer';
 
 interface GroupDetailsProps {
   groupId: string;
@@ -16,7 +16,8 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [leaving, setLeaving] = useState(false);
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [selectedStrandId, setSelectedStrandId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'pinned'>('all');
   const router = useRouter();
 
   useEffect(() => {
@@ -148,8 +149,37 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-4">
-        <h3 className="font-medium text-gray-900 mb-3">Images</h3>
-        <ImageFeed groupId={groupId} onImageClick={(imageId) => setSelectedImageId(imageId)} />
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium text-gray-900">Strands</h3>
+        </div>
+        {/* Tabs */}
+        <div className="flex gap-2 mb-4 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'all'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            All Strands
+          </button>
+          <button
+            onClick={() => setActiveTab('pinned')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'pinned'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Pinned
+          </button>
+        </div>
+        <StrandFeed
+          groupId={groupId}
+          pinnedOnly={activeTab === 'pinned'}
+          onStrandClick={(strandId) => setSelectedStrandId(strandId)}
+        />
       </div>
 
       <div className="space-y-2">
@@ -175,10 +205,10 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
         </button>
       </div>
 
-      {selectedImageId && (
-        <ImageViewer
-          imageId={selectedImageId}
-          onClose={() => setSelectedImageId(null)}
+      {selectedStrandId && (
+        <StrandViewer
+          strandId={selectedStrandId}
+          onClose={() => setSelectedStrandId(null)}
         />
       )}
     </div>

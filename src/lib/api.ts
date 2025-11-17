@@ -336,6 +336,128 @@ export const imageApi = {
   },
 };
 
+// Strand API functions
+import { Strand, StrandFeedResponse, Comment as StrandComment } from '@/types/strand';
+
+export const strandApi = {
+  getStrands: async (limit?: number, offset?: number) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    const query = params.toString();
+    return apiRequest<StrandFeedResponse>(`/api/strands${query ? `?${query}` : ''}`);
+  },
+
+  getGroupStrands: async (groupId: string, limit?: number, offset?: number, pinned?: boolean) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    if (pinned) params.append('pinned', 'true');
+    const query = params.toString();
+    return apiRequest<StrandFeedResponse>(`/api/strands/group/${groupId}${query ? `?${query}` : ''}`);
+  },
+
+  getStrand: async (id: string) => {
+    return apiRequest<Strand>(`/api/strands/${id}`);
+  },
+
+  createStrand: async (data: { content?: string; file?: File; groupIds: string[] }) => {
+    const formData = new FormData();
+    if (data.content) {
+      formData.append('content', data.content);
+    }
+    if (data.file) {
+      formData.append('file', data.file);
+    }
+    formData.append('groupIds', JSON.stringify(data.groupIds));
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch('/api/strands', {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to create strand' }));
+      throw error;
+    }
+
+    return response.json();
+  },
+
+  updateStrand: async (id: string, data: { content?: string; file?: File; removeImage?: boolean }) => {
+    const formData = new FormData();
+    if (data.content !== undefined) {
+      formData.append('content', data.content);
+    }
+    if (data.file) {
+      formData.append('file', data.file);
+    }
+    if (data.removeImage) {
+      formData.append('removeImage', 'true');
+    }
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`/api/strands/${id}`, {
+      method: 'PUT',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to update strand' }));
+      throw error;
+    }
+
+    return response.json();
+  },
+
+  deleteStrand: async (id: string) => {
+    return apiRequest<{ message: string }>(`/api/strands/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  pinStrand: async (strandId: string, groupId: string) => {
+    return apiRequest<{ message: string }>(`/api/strands/${strandId}/pin`, {
+      method: 'POST',
+      body: JSON.stringify({ groupId }),
+    });
+  },
+
+  unpinStrand: async (strandId: string, groupId: string) => {
+    return apiRequest<{ message: string }>(`/api/strands/${strandId}/pin`, {
+      method: 'DELETE',
+      body: JSON.stringify({ groupId }),
+    });
+  },
+
+  // Comments API
+  getStrandComments: async (strandId: string) => {
+    return apiRequest<{ comments: StrandComment[] }>(`/api/strands/${strandId}/comments`);
+  },
+
+  createStrandComment: async (strandId: string, content: string) => {
+    return apiRequest<StrandComment>(`/api/strands/${strandId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  },
+};
+
 // Comment types
 export interface Comment {
   id: string;

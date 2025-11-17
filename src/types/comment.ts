@@ -1,6 +1,7 @@
 export interface Comment {
   id: string;
-  imageId: string;
+  imageId?: string;
+  strandId?: string;
   userId: string;
   content: string;
   createdAt: string;

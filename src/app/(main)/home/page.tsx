@@ -4,13 +4,13 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import ImageFeed from '@/components/images/ImageFeed';
-import ImageViewer from '@/components/images/ImageViewer';
+import StrandFeed from '@/components/strands/StrandFeed';
+import StrandViewer from '@/components/strands/StrandViewer';
 
 export default function HomePage() {
   const { user, loading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [selectedStrandId, setSelectedStrandId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -37,18 +37,18 @@ export default function HomePage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Welcome, {user?.display_name || user?.username}!
           </h1>
-          <p className="text-gray-600 text-sm">Your image feed from all groups.</p>
+          <p className="text-gray-600 text-sm">Your strand feed from all groups.</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-6 animate-slide-up">
-          <ImageFeed onImageClick={(imageId) => setSelectedImageId(imageId)} />
+          <StrandFeed onStrandClick={(strandId) => setSelectedStrandId(strandId)} />
         </div>
       </div>
 
-      {selectedImageId && (
-        <ImageViewer
-          imageId={selectedImageId}
-          onClose={() => setSelectedImageId(null)}
+      {selectedStrandId && (
+        <StrandViewer
+          strandId={selectedStrandId}
+          onClose={() => setSelectedStrandId(null)}
         />
       )}
     </div>
