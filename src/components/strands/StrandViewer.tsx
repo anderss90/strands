@@ -164,7 +164,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
           <p className="mb-4">{error || 'Strand not found'}</p>
           <button
             onClick={handleClose}
-            className="bg-white text-black px-4 py-2 rounded-lg font-medium"
+            className="bg-gray-700 text-gray-100 px-4 py-2 rounded-lg font-medium"
           >
             Close
           </button>

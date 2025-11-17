@@ -85,7 +85,7 @@ export default function AddMembersToGroup({ groupId, onSuccess }: AddMembersToGr
   if (friendsLoading) {
     return (
       <div className="text-center py-8">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -93,10 +93,10 @@ export default function AddMembersToGroup({ groupId, onSuccess }: AddMembersToGr
   if (availableFriends.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-600 mb-4">All your friends are already in this group.</p>
+        <p className="text-gray-400 mb-4">All your friends are already in this group.</p>
         <button
           onClick={() => router.push(`/groups/${groupId}`)}
-          className="text-blue-600 hover:text-blue-700 font-medium"
+          className="text-blue-400 hover:text-blue-300 font-medium"
         >
           Back to Group
         </button>
@@ -107,23 +107,23 @@ export default function AddMembersToGroup({ groupId, onSuccess }: AddMembersToGr
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           Select Friends to Add
         </label>
-        <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-2">
+        <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-700 rounded-lg p-2 bg-gray-700/50">
           {availableFriends.map((friend) => (
             <label
               key={friend.userId}
-              className="flex items-center space-x-3 p-2 rounded hover:bg-gray-50 cursor-pointer min-h-[44px]"
+              className="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer min-h-[44px]"
             >
               <input
                 type="checkbox"
                 checked={selectedFriendIds.includes(friend.userId)}
                 onChange={() => toggleFriend(friend.userId)}
-                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-5 h-5 text-blue-600 border-gray-600 rounded focus:ring-blue-500 bg-gray-700"
               />
               <div className="flex items-center space-x-2 flex-1 min-w-0">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
                   {friend.profilePictureUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -132,14 +132,14 @@ export default function AddMembersToGroup({ groupId, onSuccess }: AddMembersToGr
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   ) : (
-                    <span className="text-blue-600 text-lg">
+                    <span className="text-blue-400 text-lg">
                       {friend.displayName.charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate text-sm">{friend.displayName}</p>
-                  <p className="text-xs text-gray-500 truncate">@{friend.username}</p>
+                  <p className="font-medium text-gray-100 truncate text-sm">{friend.displayName}</p>
+                  <p className="text-xs text-gray-400 truncate">@{friend.username}</p>
                 </div>
               </div>
             </label>
@@ -148,7 +148,7 @@ export default function AddMembersToGroup({ groupId, onSuccess }: AddMembersToGr
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-red-900/20 border border-red-700 text-red-400 px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}

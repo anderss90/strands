@@ -187,25 +187,25 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
 
       {/* Text Content */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           Text Content (optional)
         </label>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="What's on your mind?"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black text-base min-h-[120px] resize-y"
+          className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700 text-base min-h-[120px] resize-y"
           maxLength={5000}
           rows={5}
         />
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-gray-400 mt-1">
           {content.length}/5000 characters
         </p>
       </div>
 
       {/* Image Selection */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           Image (optional)
         </label>
         {!preview ? (
@@ -259,7 +259,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="relative rounded-lg overflow-hidden border border-gray-300">
+            <div className="relative rounded-lg overflow-hidden border border-gray-600">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={preview}
@@ -299,14 +299,14 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
               <button
                 type="button"
                 onClick={handleCameraClick}
-                className="bg-gray-200 text-gray-800 py-3 px-4 rounded-lg font-medium hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[48px] active:scale-95 transition-all duration-200"
+                className="bg-gray-700 text-gray-100 py-3 px-4 rounded-lg font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[48px] active:scale-95 transition-all duration-200"
               >
                 📷 Take New
               </button>
               <button
                 type="button"
                 onClick={handleGalleryClick}
-                className="bg-gray-200 text-gray-800 py-3 px-4 rounded-lg font-medium hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[48px] active:scale-95 transition-all duration-200"
+                className="bg-gray-700 text-gray-100 py-3 px-4 rounded-lg font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[48px] active:scale-95 transition-all duration-200"
               >
                 🖼️ Choose Different
               </button>
@@ -317,31 +317,31 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
 
       {/* Group Selection */}
       {groupsLoading ? (
-        <div className="text-sm text-gray-600 py-2">Loading groups...</div>
+        <div className="text-sm text-gray-400 py-2">Loading groups...</div>
       ) : groups.length === 0 ? (
         <div className="text-sm text-gray-500 py-2">
           No groups yet. Create a group to share strands.
         </div>
       ) : (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Share with Groups (required)
           </label>
-          <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-2">
+          <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-700 rounded-lg p-2 bg-gray-700/50">
             {groups.map((group) => (
               <label
                 key={group.id}
-                className="flex items-center space-x-3 p-2 rounded hover:bg-gray-50 cursor-pointer min-h-[44px]"
+                className="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer min-h-[44px]"
               >
                 <input
                   type="checkbox"
                   checked={selectedGroupIds.includes(group.id)}
                   onChange={() => toggleGroup(group.id)}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="w-5 h-5 text-blue-600 border-gray-600 rounded focus:ring-blue-500 bg-gray-700"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate text-sm">{group.name}</p>
-                  <p className="text-xs text-gray-500 capitalize">{group.userRole}</p>
+                  <p className="font-medium text-gray-100 truncate text-sm">{group.name}</p>
+                  <p className="text-xs text-gray-400 capitalize">{group.userRole}</p>
                 </div>
               </label>
             ))}
@@ -350,7 +350,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-red-900/20 border border-red-700 text-red-400 px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}

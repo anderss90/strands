@@ -97,19 +97,19 @@ export default function AddFriend() {
 
       {results.length > 0 && (
         <div className="space-y-3 animate-fade-in">
-          <h3 className="font-medium text-gray-900">Search Results</h3>
+          <h3 className="font-medium text-gray-100">Search Results</h3>
           {results.map((user, index) => (
             <div
               key={user.id}
-              className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between hover:shadow-md transition-all duration-200 animate-slide-in"
+              className="bg-gray-800 rounded-lg shadow-sm p-4 flex items-center justify-between hover:shadow-md transition-all duration-200 border border-gray-700 animate-slide-in"
               style={{
                 animationDelay: `${index * 0.05}s`,
                 animationFillMode: 'both',
               }}
             >
               <div className="flex items-center space-x-3 flex-1">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-blue-600 text-xl">
+                <div className="w-12 h-12 bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-400 text-xl">
                     {user.profilePictureUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -123,8 +123,8 @@ export default function AddFriend() {
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{user.displayName}</p>
-                  <p className="text-sm text-gray-500 truncate">@{user.username}</p>
+                  <p className="font-medium text-gray-100 truncate">{user.displayName}</p>
+                  <p className="text-sm text-gray-400 truncate">@{user.username}</p>
                 </div>
               </div>
               <button
