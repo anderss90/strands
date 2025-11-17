@@ -30,14 +30,14 @@ export default function GroupsList() {
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="text-gray-600">Loading groups...</div>
+        <div className="text-gray-400">Loading groups...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+      <div className="bg-red-900/20 border border-red-700 text-red-400 px-4 py-3 rounded-lg text-sm mb-4">
         {error}
       </div>
     );
@@ -46,7 +46,7 @@ export default function GroupsList() {
   if (groups.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-600 mb-4">You don&apos;t have any groups yet.</p>
+        <p className="text-gray-400 mb-4">You don&apos;t have any groups yet.</p>
         <p className="text-sm text-gray-500">Create a group to get started!</p>
       </div>
     );
@@ -58,7 +58,7 @@ export default function GroupsList() {
         <div
           key={group.id}
           onClick={() => router.push(`/groups/${group.id}`)}
-          className="bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-all duration-200 active:scale-[0.98] active:bg-gray-50 min-h-[60px] animate-slide-in"
+          className="bg-gray-800 rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-all duration-200 active:scale-[0.98] active:bg-gray-700 border border-gray-700 min-h-[60px] animate-slide-in"
           style={{
             animationDelay: `${index * 0.05}s`,
             animationFillMode: 'both',
@@ -66,11 +66,11 @@ export default function GroupsList() {
         >
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-gray-900 truncate text-base">{group.name}</h3>
+              <h3 className="font-medium text-gray-100 truncate text-base">{group.name}</h3>
               <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-gray-500 capitalize">{group.userRole}</span>
+                <span className="text-xs text-gray-400 capitalize">{group.userRole}</span>
                 {group.userRole === 'admin' && (
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Admin</span>
+                  <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded">Admin</span>
                 )}
               </div>
             </div>

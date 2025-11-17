@@ -30,7 +30,7 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto space-y-6">
       <div>
-        <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
           Username
         </label>
         <input
@@ -39,14 +39,14 @@ export default function LoginForm() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[48px] text-black"
+          className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[48px] bg-gray-700"
           placeholder="username"
           autoComplete="username"
         />
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
           Password
         </label>
         <input
@@ -55,7 +55,7 @@ export default function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base text-black"
+          className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base bg-gray-700"
           placeholder="••••••••"
           autoComplete="current-password"
           minLength={8}
@@ -63,7 +63,7 @@ export default function LoginForm() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-red-900/20 border border-red-700 text-red-400 px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}

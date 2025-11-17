@@ -81,7 +81,7 @@ export default function CreateGroup({ onSuccess }: CreateGroupProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="groupName" className="block text-sm font-medium text-gray-300 mb-2">
           Group Name
         </label>
         <input
@@ -92,35 +92,35 @@ export default function CreateGroup({ onSuccess }: CreateGroupProps) {
           placeholder="Enter group name"
           required
           maxLength={100}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[48px] text-black"
+          className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[48px] bg-gray-700"
         />
       </div>
 
       {friendsLoading ? (
-        <div className="text-sm text-gray-600 py-2">Loading friends...</div>
+        <div className="text-sm text-gray-400 py-2">Loading friends...</div>
       ) : friends.length === 0 ? (
         <div className="text-sm text-gray-500 py-2">
           No friends yet. Add friends to include them in groups.
         </div>
       ) : (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Add Friends (Optional)
           </label>
-          <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2">
+          <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-700 rounded-lg p-2 bg-gray-700/50">
             {friends.map((friend) => (
               <label
                 key={friend.userId}
-                className="flex items-center space-x-3 p-2 rounded hover:bg-gray-50 cursor-pointer min-h-[44px]"
+                className="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer min-h-[44px]"
               >
                 <input
                   type="checkbox"
                   checked={selectedFriendIds.includes(friend.userId)}
                   onChange={() => toggleFriend(friend.userId)}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="w-5 h-5 text-blue-600 border-gray-600 rounded focus:ring-blue-500 bg-gray-700"
                 />
                 <div className="flex items-center space-x-2 flex-1 min-w-0">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
                     {friend.profilePictureUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -129,14 +129,14 @@ export default function CreateGroup({ onSuccess }: CreateGroupProps) {
                         className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
-                      <span className="text-blue-600 text-lg">
+                      <span className="text-blue-400 text-lg">
                         {friend.displayName.charAt(0).toUpperCase()}
                       </span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate text-sm">{friend.displayName}</p>
-                    <p className="text-xs text-gray-500 truncate">@{friend.username}</p>
+                    <p className="font-medium text-gray-100 truncate text-sm">{friend.displayName}</p>
+                    <p className="text-xs text-gray-400 truncate">@{friend.username}</p>
                   </div>
                 </div>
               </label>
@@ -146,7 +146,7 @@ export default function CreateGroup({ onSuccess }: CreateGroupProps) {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-red-900/20 border border-red-700 text-red-400 px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}

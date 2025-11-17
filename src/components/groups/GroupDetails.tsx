@@ -73,14 +73,14 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="text-gray-600">Loading group...</div>
+        <div className="text-gray-400">Loading group...</div>
       </div>
     );
   }
 
   if (error || !group) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+      <div className="bg-red-900/20 border border-red-700 text-red-400 px-4 py-3 rounded-lg text-sm">
         {error || 'Group not found'}
       </div>
     );
@@ -91,9 +91,9 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h2 className="text-xl font-bold text-gray-900 mb-1">{group.name}</h2>
-        <p className="text-sm text-gray-500">
+      <div className="bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-700">
+        <h2 className="text-xl font-bold text-gray-100 mb-1">{group.name}</h2>
+        <p className="text-sm text-gray-400">
           {group.members?.length || 0} member{group.members?.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -105,17 +105,17 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
         + Create Strand
       </button>
 
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h3 className="font-medium text-gray-900 mb-3">Members</h3>
+      <div className="bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-700">
+        <h3 className="font-medium text-gray-100 mb-3">Members</h3>
         {group.members && group.members.length > 0 ? (
           <div className="space-y-2">
             {group.members.map((member) => (
               <div
                 key={member.id}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 min-h-[60px]"
+                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-700 min-h-[60px]"
               >
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
                     {member.user?.profilePictureUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -124,16 +124,16 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
                         className="w-12 h-12 rounded-full object-cover"
                       />
                     ) : (
-                      <span className="text-blue-600 text-xl">
+                      <span className="text-blue-400 text-xl">
                         {member.user?.displayName.charAt(0).toUpperCase() || '?'}
                       </span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate text-base">
+                    <p className="font-medium text-gray-100 truncate text-base">
                       {member.user?.displayName || 'Unknown'}
                     </p>
-                    <p className="text-sm text-gray-500 truncate">
+                    <p className="text-sm text-gray-400 truncate">
                       @{member.user?.username || 'unknown'}
                       {member.role === 'admin' && ' • Admin'}
                     </p>
@@ -142,7 +142,7 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
                 {isAdmin && member.role !== 'admin' && (
                   <button
                     onClick={() => handleRemoveMember(member.userId, member.user?.displayName || 'member')}
-                    className="text-red-600 hover:text-red-700 text-sm font-medium px-3 py-2 min-h-[44px]"
+                    className="text-red-400 hover:text-red-300 text-sm font-medium px-3 py-2 min-h-[44px]"
                   >
                     Remove
                   </button>
@@ -151,20 +151,20 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-sm">No members yet.</p>
+          <p className="text-gray-400 text-sm">No members yet.</p>
         )}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h3 className="font-medium text-gray-900 mb-3">Strands</h3>
+      <div className="bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-700">
+        <h3 className="font-medium text-gray-100 mb-3">Strands</h3>
         {/* Tabs */}
-        <div className="flex gap-2 mb-4 border-b border-gray-200">
+        <div className="flex gap-2 mb-4 border-b border-gray-700">
           <button
             onClick={() => setActiveTab('all')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'all'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-blue-400 border-b-2 border-blue-400'
+                : 'text-gray-400 hover:text-gray-200'
             }`}
           >
             All Strands
@@ -173,8 +173,8 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
             onClick={() => setActiveTab('pinned')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'pinned'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-blue-400 border-b-2 border-blue-400'
+                : 'text-gray-400 hover:text-gray-200'
             }`}
           >
             Pinned

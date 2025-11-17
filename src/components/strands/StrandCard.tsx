@@ -14,10 +14,10 @@ export default function StrandCard({ strand, onClick }: StrandCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md active:scale-[0.98] transition-all duration-200"
+      className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 overflow-hidden cursor-pointer hover:shadow-md active:scale-[0.98] transition-all duration-200"
     >
       {hasImage && strand.image && (
-        <div className="relative aspect-square bg-gray-100 overflow-hidden">
+        <div className="relative aspect-square bg-gray-700 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={strand.image.thumbnailUrl || strand.image.imageUrl}
@@ -38,11 +38,11 @@ export default function StrandCard({ strand, onClick }: StrandCardProps) {
       
       {hasText && (
         <div className="p-4">
-          <p className="text-gray-900 text-sm line-clamp-3">{strand.content}</p>
+          <p className="text-gray-100 text-sm line-clamp-3">{strand.content}</p>
         </div>
       )}
 
-      <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+      <div className="px-4 pb-4 pt-2 border-t border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {strand.user?.profilePictureUrl ? (
@@ -53,18 +53,18 @@ export default function StrandCard({ strand, onClick }: StrandCardProps) {
                 className="w-6 h-6 rounded-full object-cover"
               />
             ) : (
-              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 text-xs font-medium">
+              <div className="w-6 h-6 bg-blue-900 rounded-full flex items-center justify-center">
+                <span className="text-blue-400 text-xs font-medium">
                   {strand.user?.displayName?.charAt(0).toUpperCase() || '?'}
                 </span>
               </div>
             )}
-            <p className="text-gray-700 text-xs font-medium truncate">
+            <p className="text-gray-300 text-xs font-medium truncate">
               {strand.user?.displayName || 'Unknown'}
             </p>
           </div>
           {strand.editedAt && (
-            <span className="text-gray-400 text-xs">Edited</span>
+            <span className="text-gray-500 text-xs">Edited</span>
           )}
         </div>
       </div>

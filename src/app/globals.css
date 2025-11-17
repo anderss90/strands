@@ -3,15 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #111827;
+  --foreground: #f9fafb;
 }
 
 body {
@@ -154,13 +147,13 @@ button, a, input, select, textarea {
   transform: scale(0.98);
 }
 
-/* Skeleton loader */
+/* Skeleton loader - dark mode */
 .skeleton {
   background: linear-gradient(
     90deg,
-    #f0f0f0 25%,
-    #e0e0e0 50%,
-    #f0f0f0 75%
+    #374151 25%,
+    #4b5563 50%,
+    #374151 75%
   );
   background-size: 1000px 100%;
   animation: shimmer 2s infinite;
@@ -189,7 +182,7 @@ button, a, input, select, textarea {
   }
 }
 
-/* Make all input text black */
+/* Make all input text white/light for dark mode readability */
 input[type="text"],
 input[type="password"],
 input[type="email"],
@@ -199,10 +192,11 @@ input[type="tel"],
 input[type="url"],
 textarea,
 select {
-  color: #000000 !important;
+  color: #f9fafb !important;
+  background-color: #1f2937 !important;
 }
 
-/* Ensure placeholder text is visible but doesn't override input text color */
+/* Ensure placeholder text is visible in dark mode */
 input::placeholder,
 textarea::placeholder {
   color: #9ca3af;

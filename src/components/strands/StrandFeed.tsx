@@ -111,7 +111,7 @@ export default function StrandFeed({ groupId, pinnedOnly = false, onStrandClick 
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+      <div className="bg-red-900/20 border border-red-700 text-red-400 px-4 py-3 rounded-lg text-sm mb-4">
         {error}
       </div>
     );
@@ -120,7 +120,7 @@ export default function StrandFeed({ groupId, pinnedOnly = false, onStrandClick 
   if (strands.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-600 mb-4">
+        <p className="text-gray-400 mb-4">
           {pinnedOnly ? 'No pinned strands yet.' : 'No strands yet.'}
         </p>
         <p className="text-sm text-gray-500">
@@ -161,7 +161,7 @@ export default function StrandFeed({ groupId, pinnedOnly = false, onStrandClick 
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="bg-gray-200 text-gray-800 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 active:scale-95 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] transition-all duration-200"
+              className="bg-gray-700 text-gray-100 py-3 px-6 rounded-lg font-medium hover:bg-gray-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] transition-all duration-200"
             >
               {loadingMore ? (
                 <span className="flex items-center justify-center gap-2">

@@ -19,14 +19,14 @@ function UploadPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-900 pb-20">
       <div className="max-w-2xl mx-auto p-4">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Strand</h1>
-          <p className="text-gray-600 text-sm">Share text, images, or both with your groups.</p>
+        <div className="bg-gray-800 rounded-lg shadow-sm p-6 mb-4 border border-gray-700">
+          <h1 className="text-2xl font-bold text-gray-100 mb-2">Create Strand</h1>
+          <p className="text-gray-400 text-sm">Share text, images, or both with your groups.</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-700">
           <StrandCreate onSuccess={handleSuccess} preselectedGroupId={groupId || undefined} />
         </div>
       </div>
@@ -47,7 +47,7 @@ export default function UploadPage() {
   if (loading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export default function UploadPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-400">Loading...</div>
       </div>
     }>
       <UploadPageContent />

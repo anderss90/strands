@@ -24,25 +24,25 @@ export default function FriendsPage() {
   if (loading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-400">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-900 p-4">
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Friends</h1>
+        <div className="bg-gray-800 rounded-lg shadow-sm p-6 mb-4 border border-gray-700">
+          <h1 className="text-2xl font-bold text-gray-100 mb-4">Friends</h1>
           
           {/* Tabs */}
-          <div className="flex border-b border-gray-200 mb-4">
+          <div className="flex border-b border-gray-700 mb-4">
             <button
               onClick={() => setActiveTab('friends')}
               className={`flex-1 py-3 px-4 text-center font-medium min-h-[48px] ${
                 activeTab === 'friends'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'text-blue-400 border-b-2 border-blue-400'
+                  : 'text-gray-400 hover:text-gray-200'
               }`}
             >
               Friends
@@ -51,8 +51,8 @@ export default function FriendsPage() {
               onClick={() => setActiveTab('requests')}
               className={`flex-1 py-3 px-4 text-center font-medium min-h-[48px] ${
                 activeTab === 'requests'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'text-blue-400 border-b-2 border-blue-400'
+                  : 'text-gray-400 hover:text-gray-200'
               }`}
             >
               Requests
@@ -61,8 +61,8 @@ export default function FriendsPage() {
               onClick={() => setActiveTab('add')}
               className={`flex-1 py-3 px-4 text-center font-medium min-h-[48px] ${
                 activeTab === 'add'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'text-blue-400 border-b-2 border-blue-400'
+                  : 'text-gray-400 hover:text-gray-200'
               }`}
             >
               Add Friend

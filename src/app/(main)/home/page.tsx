@@ -21,7 +21,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -31,16 +31,16 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-900 pb-20">
       <div className="max-w-2xl mx-auto p-4">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-4 animate-fade-in">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <div className="bg-gray-800 rounded-lg shadow-sm p-6 mb-4 animate-fade-in border border-gray-700">
+          <h1 className="text-2xl font-bold text-gray-100 mb-2">
             Welcome, {user?.display_name || user?.username}!
           </h1>
-          <p className="text-gray-600 text-sm">Your strand feed from all groups.</p>
+          <p className="text-gray-400 text-sm">Your strand feed from all groups.</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 animate-slide-up">
+        <div className="bg-gray-800 rounded-lg shadow-sm p-6 animate-slide-up border border-gray-700">
           <StrandFeed onStrandClick={(strandId) => setSelectedStrandId(strandId)} />
         </div>
       </div>
