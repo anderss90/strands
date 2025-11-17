@@ -17,7 +17,6 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
