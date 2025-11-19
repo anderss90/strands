@@ -62,10 +62,11 @@ export async function notifyGroupMembers(
     }));
 
     // Prepare notification payload
+    // Use relative paths - service worker will convert to absolute URLs
     const payload = JSON.stringify({
       title: notification.title,
       body: notification.body,
-      icon: '/icon-192x192.png', // You may want to add an icon
+      icon: '/icon-192x192.png',
       badge: '/icon-192x192.png',
       tag: `strands-${groupId}`,
       data: notification.data || {},

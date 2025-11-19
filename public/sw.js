@@ -91,10 +91,33 @@ self.addEventListener('fetch', function(event) {
 self.addEventListener('push', function(event) {
   const data = event.data ? event.data.json() : {};
   const title = data.title || 'Strands';
+  
+  // Get the origin from registration scope or use a fallback
+  const getOrigin = function() {
+    if (self.registration && self.registration.scope) {
+      try {
+        const url = new URL(self.registration.scope);
+        return url.origin;
+      } catch (e) {
+        // Fallback if URL parsing fails
+      }
+    }
+    // Fallback: try to get from self.location if available
+    if (self.location && self.location.origin) {
+      return self.location.origin;
+    }
+    // Last resort: use empty string (relative paths should still work)
+    return '';
+  };
+  
+  const origin = getOrigin();
+  const iconPath = data.icon || '/icon-192x192.png';
+  const badgePath = data.badge || '/icon-192x192.png';
+  
   const options = {
     body: data.body || 'You have a new notification',
-    icon: data.icon || '/icon-192x192.png',
-    badge: data.badge || '/icon-192x192.png',
+    icon: iconPath.startsWith('http') ? iconPath : (origin + iconPath),
+    badge: badgePath.startsWith('http') ? badgePath : (origin + badgePath),
     tag: data.tag || 'strands-notification',
     data: data.data || {},
     requireInteraction: false,
@@ -102,7 +125,38 @@ self.addEventListener('push', function(event) {
   };
 
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    // First ensure the icon is cached, then show notification
+    caches.match('/icon-192x192.png')
+      .then(function(cachedIcon) {
+        if (!cachedIcon) {
+          // Cache the icon if not already cached
+          return fetch('/icon-192x192.png')
+            .then(function(response) {
+              if (response.ok) {
+                const cache = caches.open(CACHE_NAME);
+                return cache.then(function(c) {
+                  c.put('/icon-192x192.png', response.clone());
+                  return response;
+                });
+              }
+              return response;
+            })
+            .catch(function() {
+              // If fetch fails, continue anyway
+              return null;
+            });
+        }
+        return cachedIcon;
+      })
+      .then(function() {
+        // Show notification with absolute URL
+        return self.registration.showNotification(title, options);
+      })
+      .catch(function(error) {
+        console.error('Error showing notification:', error);
+        // Show notification anyway, even if icon caching failed
+        return self.registration.showNotification(title, options);
+      })
   );
 });
 
