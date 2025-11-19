@@ -534,6 +534,19 @@ export const strandApi = {
       body: JSON.stringify({ content }),
     });
   },
+
+  // Fire reactions API
+  addFire: async (strandId: string) => {
+    return apiRequest<{ success: boolean; fireCount: number }>(`/api/strands/${strandId}/fire`, {
+      method: 'POST',
+    });
+  },
+
+  removeFire: async (strandId: string) => {
+    return apiRequest<{ success: boolean; fireCount: number }>(`/api/strands/${strandId}/fire`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // Comment types

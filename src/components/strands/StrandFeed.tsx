@@ -145,6 +145,15 @@ export default function StrandFeed({ groupId, pinnedOnly = false, onStrandClick 
                   router.push(`/strands/${strand.id}`);
                 }
               }}
+              onFireUpdate={(strandId, fireCount, hasUserFired) => {
+                setStrands(prev =>
+                  prev.map(s =>
+                    s.id === strandId
+                      ? { ...s, fireCount, hasUserFired }
+                      : s
+                  )
+                );
+              }}
             />
           </div>
         ))}

@@ -144,7 +144,7 @@ async function testConnection() {
         console.log(`   ✓ ${table}`);
       });
 
-      const requiredTables = ['users', 'friends', 'groups', 'group_members', 'images', 'image_group_shares', 'image_comments', 'strands', 'strand_group_shares', 'strand_pins', 'strand_comments', 'group_invites', 'user_group_read_status', 'push_subscriptions'];
+      const requiredTables = ['users', 'friends', 'groups', 'group_members', 'images', 'image_group_shares', 'image_comments', 'strands', 'strand_group_shares', 'strand_pins', 'strand_comments', 'group_invites', 'user_group_read_status', 'push_subscriptions', 'strand_fires'];
       const missingTables = requiredTables.filter(table => !tables.includes(table));
       
       if (missingTables.length > 0) {

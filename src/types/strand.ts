@@ -7,6 +7,8 @@ export interface Strand {
   updatedAt: string;
   editedAt: string | null;
   isPinned?: boolean;
+  fireCount?: number;
+  hasUserFired?: boolean;
   user?: {
     id: string;
     username: string;

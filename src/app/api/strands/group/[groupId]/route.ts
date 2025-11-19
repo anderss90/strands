@@ -76,7 +76,20 @@ export async function GET(
           i.file_name,
           i.file_size,
           i.mime_type,
-          sp.pinned_at
+          sp.pinned_at,
+          COALESCE(
+            (
+              SELECT COUNT(*)::int
+              FROM strand_fires sf
+              WHERE sf.strand_id = s.id
+            ),
+            0
+          ) as fire_count,
+          EXISTS(
+            SELECT 1
+            FROM strand_fires sf
+            WHERE sf.strand_id = s.id AND sf.user_id = $4
+          ) as has_user_fired
         FROM strands s
         INNER JOIN strand_group_shares sgs ON s.id = sgs.strand_id
         INNER JOIN strand_pins sp ON s.id = sp.strand_id AND sp.group_id = $1
@@ -85,7 +98,7 @@ export async function GET(
         WHERE sgs.group_id = $1
         ORDER BY sp.pinned_at DESC
         LIMIT $2 OFFSET $3`,
-        [groupId, limit, offset]
+        [groupId, limit, offset, authUser.userId]
       );
     } else {
       // Get all strands (pinned first, then by creation date)
@@ -107,7 +120,20 @@ export async function GET(
           i.file_size,
           i.mime_type,
           sp.pinned_at,
-          CASE WHEN sp.id IS NOT NULL THEN 1 ELSE 0 END as is_pinned
+          CASE WHEN sp.id IS NOT NULL THEN 1 ELSE 0 END as is_pinned,
+          COALESCE(
+            (
+              SELECT COUNT(*)::int
+              FROM strand_fires sf
+              WHERE sf.strand_id = s.id
+            ),
+            0
+          ) as fire_count,
+          EXISTS(
+            SELECT 1
+            FROM strand_fires sf
+            WHERE sf.strand_id = s.id AND sf.user_id = $4
+          ) as has_user_fired
         FROM strands s
         INNER JOIN strand_group_shares sgs ON s.id = sgs.strand_id
         INNER JOIN users u ON s.user_id = u.id
@@ -116,7 +142,7 @@ export async function GET(
         WHERE sgs.group_id = $1
         ORDER BY is_pinned DESC, s.created_at DESC
         LIMIT $2 OFFSET $3`,
-        [groupId, limit, offset]
+        [groupId, limit, offset, authUser.userId]
       );
     }
 
@@ -129,6 +155,8 @@ export async function GET(
       updatedAt: row.updated_at,
       editedAt: row.edited_at,
       isPinned: !!row.pinned_at || row.is_pinned === 1,
+      fireCount: row.fire_count || 0,
+      hasUserFired: row.has_user_fired || false,
       user: {
         id: row.user_id,
         username: row.username,

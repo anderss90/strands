@@ -156,6 +156,15 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   UNIQUE(user_id, endpoint)
 );
 
+-- Strand fires (reactions) table
+CREATE TABLE IF NOT EXISTS strand_fires (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  strand_id UUID NOT NULL REFERENCES strands(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(strand_id, user_id)
+);
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_friends_friend_id ON friends(friend_id);
@@ -198,6 +207,10 @@ CREATE INDEX IF NOT EXISTS idx_user_group_read_status_group ON user_group_read_s
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON push_subscriptions(endpoint);
 
+CREATE INDEX IF NOT EXISTS idx_strand_fires_strand_id ON strand_fires(strand_id);
+CREATE INDEX IF NOT EXISTS idx_strand_fires_user_id ON strand_fires(user_id);
+CREATE INDEX IF NOT EXISTS idx_strand_fires_created_at ON strand_fires(created_at);
+
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -236,6 +249,7 @@ ALTER TABLE strand_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_group_read_status ENABLE ROW LEVEL SECURITY;
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE strand_fires ENABLE ROW LEVEL SECURITY;
 
 -- Note: RLS policies should be created based on your authentication strategy
 -- For now, we'll rely on application-level authorization

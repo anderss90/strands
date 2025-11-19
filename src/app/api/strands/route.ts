@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     const strandIds = strandIdsResult.rows.map(row => row.id);
 
-    // Get full strand details with groups and image info
+    // Get full strand details with groups, image info, and fire counts
     const result = await query(
       `SELECT 
         s.id,
@@ -96,6 +96,19 @@ export async function GET(request: NextRequest) {
         i.mime_type,
         COALESCE(
           (
+            SELECT COUNT(*)::int
+            FROM strand_fires sf
+            WHERE sf.strand_id = s.id
+          ),
+          0
+        ) as fire_count,
+        EXISTS(
+          SELECT 1
+          FROM strand_fires sf
+          WHERE sf.strand_id = s.id AND sf.user_id = $2
+        ) as has_user_fired,
+        COALESCE(
+          (
             SELECT json_agg(
               json_build_object(
                 'id', g.id,
@@ -113,7 +126,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN images i ON s.image_id = i.id
       WHERE s.id = ANY($1::uuid[])
       ORDER BY s.created_at DESC`,
-      [strandIds]
+      [strandIds, authUser.userId]
     );
 
     const strands = result.rows.map(row => ({
@@ -122,6 +135,8 @@ export async function GET(request: NextRequest) {
       content: row.content,
       imageId: row.image_id,
       createdAt: row.created_at,
+      fireCount: row.fire_count || 0,
+      hasUserFired: row.has_user_fired || false,
       updatedAt: row.updated_at,
       editedAt: row.edited_at,
       user: {

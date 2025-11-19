@@ -7,6 +7,7 @@ import { Strand } from '@/types/strand';
 import { Comment } from '@/types/comment';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import LinkText from '@/components/common/LinkText';
+import { strandApi } from '@/lib/api';
 
 interface StrandViewerProps {
   strandId: string;
@@ -23,6 +24,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [firing, setFiring] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
@@ -137,6 +139,25 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
     } catch (err: any) {
       alert(err.message || 'Failed to delete strand');
       setDeleting(false);
+    }
+  };
+
+  const handleFire = async () => {
+    if (!strand) return;
+
+    try {
+      setFiring(true);
+      if (strand.hasUserFired) {
+        const result = await strandApi.removeFire(strandId);
+        setStrand({ ...strand, hasUserFired: false, fireCount: result.fireCount });
+      } else {
+        const result = await strandApi.addFire(strandId);
+        setStrand({ ...strand, hasUserFired: true, fireCount: result.fireCount });
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update fire reaction');
+    } finally {
+      setFiring(false);
     }
   };
 
@@ -331,6 +352,25 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
                 )}
               </div>
             )}
+            
+            {/* Fire Button */}
+            <div className="mb-4 flex items-center gap-3">
+              <button
+                onClick={handleFire}
+                disabled={firing}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  strand.hasUserFired
+                    ? 'bg-orange-600 text-white hover:bg-orange-700'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                <span className="text-lg">🔥</span>
+                <span className="text-sm">
+                  {strand.fireCount !== undefined ? strand.fireCount : 0}
+                </span>
+              </button>
+            </div>
+
             {strand.groups && strand.groups.length > 0 && (
               <div className="mb-3">
                 <p className="text-gray-400 text-xs mb-1">Shared in:</p>

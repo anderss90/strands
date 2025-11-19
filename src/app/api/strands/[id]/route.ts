@@ -53,6 +53,19 @@ export async function GET(
           i.mime_type,
           COALESCE(
             (
+              SELECT COUNT(*)::int
+              FROM strand_fires sf
+              WHERE sf.strand_id = s.id
+            ),
+            0
+          ) as fire_count,
+          EXISTS(
+            SELECT 1
+            FROM strand_fires sf
+            WHERE sf.strand_id = s.id AND sf.user_id = $2
+          ) as has_user_fired,
+          COALESCE(
+            (
               SELECT json_agg(
                 json_build_object(
                   'id', g.id,
@@ -69,7 +82,7 @@ export async function GET(
         INNER JOIN users u ON s.user_id = u.id
         LEFT JOIN images i ON s.image_id = i.id
         WHERE s.id = $1`,
-        [strandId]
+        [strandId, authUser.userId]
       );
     } else {
       result = await query(
@@ -89,6 +102,19 @@ export async function GET(
           i.file_name,
           i.file_size,
           i.mime_type,
+          COALESCE(
+            (
+              SELECT COUNT(*)::int
+              FROM strand_fires sf
+              WHERE sf.strand_id = s.id
+            ),
+            0
+          ) as fire_count,
+          EXISTS(
+            SELECT 1
+            FROM strand_fires sf
+            WHERE sf.strand_id = s.id AND sf.user_id = $2
+          ) as has_user_fired,
           json_agg(
             json_build_object(
               'id', g.id,
@@ -123,6 +149,8 @@ export async function GET(
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       editedAt: row.edited_at,
+      fireCount: row.fire_count || 0,
+      hasUserFired: row.has_user_fired || false,
       user: {
         id: row.user_id,
         username: row.username,
