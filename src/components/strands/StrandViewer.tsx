@@ -25,6 +25,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [firing, setFiring] = useState(false);
+  const [pinning, setPinning] = useState<string | null>(null); // Track which group is being pinned/unpinned
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
@@ -158,6 +159,38 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
       alert(err.message || 'Failed to update fire reaction');
     } finally {
       setFiring(false);
+    }
+  };
+
+  const handlePin = async (groupId: string) => {
+    if (!strand) return;
+
+    try {
+      setPinning(groupId);
+      const group = strand.groups?.find(g => g.id === groupId);
+      if (group?.isPinned) {
+        await strandApi.unpinStrand(strandId, groupId);
+        // Update group's pinned status
+        setStrand({
+          ...strand,
+          groups: strand.groups?.map(g =>
+            g.id === groupId ? { ...g, isPinned: false } : g
+          ),
+        });
+      } else {
+        await strandApi.pinStrand(strandId, groupId);
+        // Update group's pinned status
+        setStrand({
+          ...strand,
+          groups: strand.groups?.map(g =>
+            g.id === groupId ? { ...g, isPinned: true } : g
+          ),
+        });
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update pin status');
+    } finally {
+      setPinning(null);
     }
   };
 
@@ -374,15 +407,50 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
 
             {strand.groups && strand.groups.length > 0 && (
               <div className="mb-3">
-                <p className="text-gray-400 text-xs mb-1">Shared in:</p>
-                <div className="flex flex-wrap gap-1">
+                <p className="text-gray-400 text-xs mb-2">Shared in:</p>
+                <div className="space-y-2">
                   {strand.groups.map((group) => (
-                    <span
+                    <div
                       key={group.id}
-                      className="bg-blue-600 px-2 py-1 rounded text-xs"
+                      className="flex items-center justify-between p-2 rounded-lg bg-white/5"
                     >
-                      {group.name}
-                    </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-1 rounded text-xs ${
+                            group.isPinned
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-blue-600/50 text-gray-300'
+                          }`}
+                        >
+                          {group.name}
+                        </span>
+                        {group.isPinned && (
+                          <span className="text-blue-400 text-xs" title="Pinned">
+                            📌
+                          </span>
+                        )}
+                      </div>
+                      {group.userRole === 'admin' && (
+                        <button
+                          onClick={() => handlePin(group.id)}
+                          disabled={pinning === group.id}
+                          className={`px-3 py-1 rounded text-xs font-medium transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+                            group.isPinned
+                              ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                          }`}
+                          title={group.isPinned ? 'Unpin from group' : 'Pin to group'}
+                        >
+                          {pinning === group.id ? (
+                            <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          ) : group.isPinned ? (
+                            'Unpin'
+                          ) : (
+                            'Pin'
+                          )}
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>

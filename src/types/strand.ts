@@ -26,6 +26,8 @@ export interface Strand {
   groups?: {
     id: string;
     name: string;
+    isPinned?: boolean;
+    userRole?: 'admin' | 'member';
   }[];
 }
 

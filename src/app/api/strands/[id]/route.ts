@@ -69,11 +69,14 @@ export async function GET(
               SELECT json_agg(
                 json_build_object(
                   'id', g.id,
-                  'name', g.name
+                  'name', g.name,
+                  'isPinned', EXISTS(SELECT 1 FROM strand_pins sp WHERE sp.strand_id = s.id AND sp.group_id = g.id),
+                  'userRole', COALESCE(gm.role, NULL)
                 )
               )
               FROM strand_group_shares sgs
               INNER JOIN groups g ON sgs.group_id = g.id
+              LEFT JOIN group_members gm ON g.id = gm.group_id AND gm.user_id = $2
               WHERE sgs.strand_id = s.id
             ),
             '[]'::json
@@ -118,7 +121,9 @@ export async function GET(
           json_agg(
             json_build_object(
               'id', g.id,
-              'name', g.name
+              'name', g.name,
+              'isPinned', EXISTS(SELECT 1 FROM strand_pins sp WHERE sp.strand_id = s.id AND sp.group_id = g.id),
+              'userRole', gm.role
             )
           ) FILTER (WHERE g.id IS NOT NULL) as groups
         FROM strands s
