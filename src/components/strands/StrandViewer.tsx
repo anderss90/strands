@@ -249,6 +249,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
                 }
               }}
               className="text-blue-500 p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-200 active:scale-95"
+              title="Edit strand"
             >
               <svg
                 className="w-5 h-5"
