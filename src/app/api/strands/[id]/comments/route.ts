@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/middleware';
 import { query } from '@/lib/db';
+import { notifyGroupMembers } from '@/lib/notifications';
 
 // GET /api/strands/[id]/comments - Get comments for a strand
 export async function GET(
@@ -187,6 +188,51 @@ export async function POST(
     );
 
     const user = userResult.rows[0];
+
+    // Get strand info and group IDs for notifications
+    const strandResult = await query(
+      `SELECT s.user_id as strand_user_id, s.content as strand_content,
+              array_agg(DISTINCT sgs.group_id) as group_ids
+       FROM strands s
+       INNER JOIN strand_group_shares sgs ON s.id = sgs.strand_id
+       WHERE s.id = $1
+       GROUP BY s.id, s.user_id, s.content`,
+      [strandId]
+    );
+
+    if (strandResult.rows.length > 0) {
+      const strand = strandResult.rows[0];
+      const groupIds = strand.group_ids || [];
+
+      // Send notifications to all groups where this strand is shared
+      // (excluding the comment author and strand author)
+      for (const groupId of groupIds) {
+        // Get group name
+        const groupResult = await query(
+          `SELECT name FROM groups WHERE id = $1`,
+          [groupId]
+        );
+        const groupName = groupResult.rows[0]?.name || 'a group';
+
+        // Send notification to all group members except comment author and strand author
+        // notifyGroupMembers already excludes the excludeUserId
+        await notifyGroupMembers(
+          groupId,
+          authUser.userId, // Exclude comment author
+          {
+            title: 'New comment in ' + groupName,
+            body: `${user.display_name} commented on a strand`,
+            data: {
+              type: 'comment',
+              strandId: strandId,
+              commentId: comment.id,
+              groupId: groupId,
+              url: `/groups/${groupId}`,
+            },
+          }
+        );
+      }
+    }
 
     return NextResponse.json(
       {

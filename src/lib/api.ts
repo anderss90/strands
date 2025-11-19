@@ -192,6 +192,7 @@ export interface Group {
   updatedAt: string;
   userRole?: 'admin' | 'member';
   joinedAt?: string;
+  unreadCount?: number;
 }
 
 export interface GroupMember {
@@ -278,6 +279,12 @@ export const groupApi = {
       message: string;
       groupId: string;
     }>(`/api/groups/invite/${token}/join`, {
+      method: 'POST',
+    });
+  },
+
+  markGroupAsRead: async (groupId: string) => {
+    return apiRequest<{ success: boolean }>(`/api/groups/${groupId}/read`, {
       method: 'POST',
     });
   },

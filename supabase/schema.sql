@@ -133,6 +133,29 @@ CREATE TABLE IF NOT EXISTS group_invites (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- User group read status - tracks when user last viewed a group
+CREATE TABLE IF NOT EXISTS user_group_read_status (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  last_read_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, group_id)
+);
+
+-- Push notification subscriptions table
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL,
+  p256dh_key TEXT NOT NULL,
+  auth_key TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, endpoint)
+);
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_friends_friend_id ON friends(friend_id);
@@ -168,6 +191,12 @@ CREATE INDEX IF NOT EXISTS idx_strand_comments_created_at ON strand_comments(cre
 CREATE INDEX IF NOT EXISTS idx_group_invites_token ON group_invites(token);
 CREATE INDEX IF NOT EXISTS idx_group_invites_group_id ON group_invites(group_id);
 CREATE INDEX IF NOT EXISTS idx_group_invites_expires_at ON group_invites(expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_user_group_read_status_user_group ON user_group_read_status(user_id, group_id);
+CREATE INDEX IF NOT EXISTS idx_user_group_read_status_group ON user_group_read_status(group_id);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON push_subscriptions(endpoint);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -205,6 +234,8 @@ ALTER TABLE strand_group_shares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE strand_pins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE strand_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_group_read_status ENABLE ROW LEVEL SECURITY;
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Note: RLS policies should be created based on your authentication strategy
 -- For now, we'll rely on application-level authorization

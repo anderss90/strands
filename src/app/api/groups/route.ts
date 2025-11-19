@@ -32,9 +32,29 @@ export async function GET(request: NextRequest) {
           g.created_at,
           g.updated_at,
           COALESCE(gm.role, 'non_member') as user_role,
-          gm.joined_at
+          gm.joined_at,
+          COALESCE(ugrs.last_read_at, gm.joined_at, g.created_at) as last_read_at,
+          COALESCE(
+            (SELECT COUNT(*)::int
+             FROM strand_group_shares sgs
+             INNER JOIN strands s ON sgs.strand_id = s.id
+             WHERE sgs.group_id = g.id
+             AND s.created_at > COALESCE(ugrs.last_read_at, gm.joined_at, g.created_at)
+             AND s.user_id != $1
+            ), 0
+          ) as unread_strands_count,
+          COALESCE(
+            (SELECT COUNT(*)::int
+             FROM strand_comments sc
+             INNER JOIN strand_group_shares sgs ON sc.strand_id = sgs.strand_id
+             WHERE sgs.group_id = g.id
+             AND sc.created_at > COALESCE(ugrs.last_read_at, gm.joined_at, g.created_at)
+             AND sc.user_id != $1
+            ), 0
+          ) as unread_comments_count
         FROM groups g
         LEFT JOIN group_members gm ON g.id = gm.group_id AND gm.user_id = $1
+        LEFT JOIN user_group_read_status ugrs ON g.id = ugrs.group_id AND ugrs.user_id = $1
         ORDER BY g.created_at DESC`,
         [authUser.userId]
       );
@@ -47,9 +67,29 @@ export async function GET(request: NextRequest) {
           g.created_at,
           g.updated_at,
           gm.role as user_role,
-          gm.joined_at
+          gm.joined_at,
+          COALESCE(ugrs.last_read_at, gm.joined_at, g.created_at) as last_read_at,
+          COALESCE(
+            (SELECT COUNT(*)::int
+             FROM strand_group_shares sgs
+             INNER JOIN strands s ON sgs.strand_id = s.id
+             WHERE sgs.group_id = g.id
+             AND s.created_at > COALESCE(ugrs.last_read_at, gm.joined_at, g.created_at)
+             AND s.user_id != $1
+            ), 0
+          ) as unread_strands_count,
+          COALESCE(
+            (SELECT COUNT(*)::int
+             FROM strand_comments sc
+             INNER JOIN strand_group_shares sgs ON sc.strand_id = sgs.strand_id
+             WHERE sgs.group_id = g.id
+             AND sc.created_at > COALESCE(ugrs.last_read_at, gm.joined_at, g.created_at)
+             AND sc.user_id != $1
+            ), 0
+          ) as unread_comments_count
         FROM groups g
         INNER JOIN group_members gm ON g.id = gm.group_id
+        LEFT JOIN user_group_read_status ugrs ON g.id = ugrs.group_id AND ugrs.user_id = $1
         WHERE gm.user_id = $1
         ORDER BY g.created_at DESC`,
         [authUser.userId]
@@ -64,6 +104,7 @@ export async function GET(request: NextRequest) {
       updatedAt: row.updated_at,
       userRole: row.user_role,
       joinedAt: row.joined_at,
+      unreadCount: (row.unread_strands_count || 0) + (row.unread_comments_count || 0),
     }));
 
     return NextResponse.json(groups, { status: 200 });

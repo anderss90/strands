@@ -66,7 +66,14 @@ export default function GroupsList() {
         >
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-gray-100 truncate text-base">{group.name}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium text-gray-100 truncate text-base">{group.name}</h3>
+                {group.unreadCount && group.unreadCount > 0 && (
+                  <span className="bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center flex-shrink-0">
+                    {group.unreadCount > 99 ? '99+' : group.unreadCount}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-3 mt-1">
                 <span className="text-xs text-gray-400 capitalize">{group.userRole}</span>
                 {group.userRole === 'admin' && (

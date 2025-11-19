@@ -24,8 +24,18 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
 
   useEffect(() => {
     fetchGroup();
+    markGroupAsRead();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
+
+  const markGroupAsRead = async () => {
+    try {
+      await groupApi.markGroupAsRead(groupId);
+    } catch (err) {
+      // Silently fail - not critical
+      console.error('Failed to mark group as read:', err);
+    }
+  };
 
   const fetchGroup = async () => {
     try {

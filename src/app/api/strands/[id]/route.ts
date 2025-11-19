@@ -250,7 +250,7 @@ export async function PUT(
       if (file.size > MAX_FILE_SIZE) {
         return NextResponse.json(
           { message: `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB` },
-          { status: 400 }
+          { status: 413 }
         );
       }
 

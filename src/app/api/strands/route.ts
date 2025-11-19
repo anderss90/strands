@@ -4,6 +4,7 @@ import { query } from '@/lib/db';
 import { createServerSupabase } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
 import { createStrandSchema } from '@/lib/validation';
+import { notifyGroupMembers } from '@/lib/notifications';
 
 // Maximum file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -262,7 +263,7 @@ export async function POST(request: NextRequest) {
       if (file.size > MAX_FILE_SIZE) {
         return NextResponse.json(
           { message: `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB` },
-          { status: 400 }
+          { status: 413 }
         );
       }
 
@@ -320,14 +321,44 @@ export async function POST(request: NextRequest) {
 
     const strand = strandResult.rows[0];
 
-    // Create strand group shares
+    // Create strand group shares and send notifications
     if (groupIds.length > 0) {
+      // Get user display name for notifications
+      const userResult = await query(
+        `SELECT display_name FROM users WHERE id = $1`,
+        [authUser.userId]
+      );
+      const userDisplayName = userResult.rows[0]?.display_name || authUser.username;
+
       for (const groupId of groupIds) {
         await query(
           `INSERT INTO strand_group_shares (strand_id, group_id)
            VALUES ($1, $2)
            ON CONFLICT (strand_id, group_id) DO NOTHING`,
           [strand.id, groupId]
+        );
+
+        // Get group name for notification
+        const groupResult = await query(
+          `SELECT name FROM groups WHERE id = $1`,
+          [groupId]
+        );
+        const groupName = groupResult.rows[0]?.name || 'a group';
+
+        // Send push notifications to group members
+        await notifyGroupMembers(
+          groupId,
+          authUser.userId,
+          {
+            title: 'New strand in ' + groupName,
+            body: `${userDisplayName} posted a new strand`,
+            data: {
+              type: 'strand',
+              strandId: strand.id,
+              groupId: groupId,
+              url: `/groups/${groupId}`,
+            },
+          }
         );
       }
     }
