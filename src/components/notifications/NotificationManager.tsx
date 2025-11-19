@@ -30,13 +30,33 @@ export default function NotificationManager() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !isSupported || permission !== 'granted') {
+    if (!isAuthenticated || !isSupported) {
       return;
     }
 
-    // Subscribe to push notifications
-    const subscribeToPush = async () => {
+    const requestPermissionAndSubscribe = async () => {
       try {
+        // Check current permission status
+        let currentPermission = Notification.permission;
+        
+        // Request notification permission if not already granted or denied
+        if (currentPermission === 'default') {
+          currentPermission = await Notification.requestPermission();
+          setPermission(currentPermission);
+          
+          if (currentPermission !== 'granted') {
+            console.log('Notification permission denied or dismissed');
+            return;
+          }
+        }
+
+        // If permission is denied, don't proceed
+        if (currentPermission === 'denied') {
+          console.log('Notification permission was previously denied');
+          return;
+        }
+
+        // Subscribe to push notifications
         const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidPublicKey) {
           console.warn('VAPID public key not configured. Push notifications will not work.');
@@ -44,6 +64,14 @@ export default function NotificationManager() {
         }
 
         const registration = await navigator.serviceWorker.ready;
+        
+        // Check if already subscribed
+        const existingSubscription = await registration.pushManager.getSubscription();
+        if (existingSubscription) {
+          console.log('Already subscribed to push notifications');
+          return;
+        }
+
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
@@ -67,14 +95,21 @@ export default function NotificationManager() {
 
         if (!response.ok) {
           console.error('Failed to subscribe to push notifications');
+        } else {
+          console.log('Successfully subscribed to push notifications');
         }
       } catch (error) {
-        console.error('Error subscribing to push notifications:', error);
+        console.error('Error requesting permission or subscribing to push notifications:', error);
       }
     };
 
-    subscribeToPush();
-  }, [isAuthenticated, isSupported, permission]);
+    // Small delay to ensure service worker is ready
+    const timer = setTimeout(() => {
+      requestPermissionAndSubscribe();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, isSupported]);
 
   // Helper function to convert VAPID key
   function urlBase64ToUint8Array(base64String: string): BufferSource {
