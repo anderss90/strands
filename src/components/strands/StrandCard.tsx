@@ -1,6 +1,7 @@
 'use client';
 
 import { Strand } from '@/types/strand';
+import LinkText from '@/components/common/LinkText';
 
 interface StrandCardProps {
   strand: Strand;
@@ -38,7 +39,9 @@ export default function StrandCard({ strand, onClick }: StrandCardProps) {
       
       {hasText && (
         <div className="p-4">
-          <p className="text-gray-100 text-sm line-clamp-3">{strand.content}</p>
+          <p className="text-gray-100 text-sm line-clamp-3">
+            <LinkText text={strand.content || ''} />
+          </p>
         </div>
       )}
 

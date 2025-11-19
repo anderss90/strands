@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Strand } from '@/types/strand';
 import { Comment } from '@/types/comment';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import LinkText from '@/components/common/LinkText';
 
 interface StrandViewerProps {
   strandId: string;
@@ -309,7 +310,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
             {hasText && (
               <div className="mb-4">
                 <p className="text-white text-base leading-relaxed whitespace-pre-wrap break-words">
-                  {strand.content}
+                  <LinkText text={strand.content || ''} />
                 </p>
                 {strand.editedAt && (
                   <p className="text-gray-400 text-xs mt-2">(edited)</p>
@@ -378,7 +379,9 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
                   <div className="flex-1 min-w-0">
                     <div className="bg-white/10 rounded-lg p-2">
                       <p className="font-medium text-xs mb-1">{comment.user.displayName}</p>
-                      <p className="text-sm break-words text-gray-300">{comment.content}</p>
+                      <p className="text-sm break-words text-gray-300">
+                        <LinkText text={comment.content} />
+                      </p>
                     </div>
                     <p className="text-gray-400 text-xs mt-1 ml-2">
                       {new Date(comment.createdAt).toLocaleDateString()}
