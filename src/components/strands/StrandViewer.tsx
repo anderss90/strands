@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Strand } from '@/types/strand';
 import { Comment } from '@/types/comment';
@@ -24,6 +24,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -143,7 +144,20 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
     if (onClose) {
       onClose();
     } else {
-      router.back();
+      // Navigate within the app instead of browser back
+      // Try to go to a sensible default based on current path
+      if (pathname?.includes('/groups/')) {
+        // Extract group ID from path if we're on a group page
+        const groupMatch = pathname.match(/\/groups\/([^\/]+)/);
+        if (groupMatch) {
+          router.push(`/groups/${groupMatch[1]}`);
+        } else {
+          router.push('/groups');
+        }
+      } else {
+        // Default to home
+        router.push('/home');
+      }
     }
   };
 
