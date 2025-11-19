@@ -206,6 +206,8 @@ export async function POST(
 
       // Send notifications to all groups where this strand is shared
       // (excluding the comment author and strand author)
+      const excludeUserIds = [authUser.userId, strand.strand_user_id];
+      
       for (const groupId of groupIds) {
         // Get group name
         const groupResult = await query(
@@ -215,10 +217,9 @@ export async function POST(
         const groupName = groupResult.rows[0]?.name || 'a group';
 
         // Send notification to all group members except comment author and strand author
-        // notifyGroupMembers already excludes the excludeUserId
         await notifyGroupMembers(
           groupId,
-          authUser.userId, // Exclude comment author
+          excludeUserIds,
           {
             title: 'New comment in ' + groupName,
             body: `${user.display_name} commented on a strand`,

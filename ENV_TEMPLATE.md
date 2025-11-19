@@ -18,6 +18,11 @@ JWT_REFRESH_SECRET=your_jwt_refresh_secret_key
 # Storage Configuration
 SUPABASE_STORAGE_BUCKET=images
 
+# Push Notifications (VAPID Keys)
+# Generate with: npx web-push generate-vapid-keys
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_vapid_public_key
+VAPID_PRIVATE_KEY=your_vapid_private_key
+
 # Application URL
 NEXTAUTH_URL=http://localhost:3000
 ```

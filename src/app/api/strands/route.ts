@@ -345,10 +345,10 @@ export async function POST(request: NextRequest) {
         );
         const groupName = groupResult.rows[0]?.name || 'a group';
 
-        // Send push notifications to group members
+        // Send push notifications to group members (exclude the strand author)
         await notifyGroupMembers(
           groupId,
-          authUser.userId,
+          [authUser.userId],
           {
             title: 'New strand in ' + groupName,
             body: `${userDisplayName} posted a new strand`,
