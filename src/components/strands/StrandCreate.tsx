@@ -13,6 +13,7 @@ interface StrandCreateProps {
 export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCreateProps) {
   const [content, setContent] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [fileData, setFileData] = useState<{ blob: Blob; name: string; type: string } | null>(null); // Store file data to persist on iOS
   const [preview, setPreview] = useState<string | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
@@ -53,7 +54,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
     }
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
@@ -75,14 +76,46 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
       return;
     }
 
-    setFile(selectedFile);
-    setError('');
+    try {
+      // On iOS, File objects can become invalid after navigation
+      // Read file into memory immediately to persist it
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      const blob = new Blob([arrayBuffer], { type: selectedFile.type || `image/${fileExtension}` });
+      
+      // Determine MIME type (normalize if missing)
+      let normalizedMimeType = selectedFile.type;
+      if (!normalizedMimeType && hasValidExtension) {
+        const extensionToMime: Record<string, string> = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+        };
+        normalizedMimeType = extensionToMime[fileExtension] || 'image/jpeg';
+      }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(selectedFile);
+      // Store file data for persistence
+      setFileData({
+        blob: blob,
+        name: selectedFile.name,
+        type: normalizedMimeType,
+      });
+      
+      // Keep the original File object for now
+      setFile(selectedFile);
+      setError('');
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(selectedFile);
+    } catch (err: any) {
+      setError('Failed to read file. Please try again.');
+      console.error('Error reading file:', err);
+    }
   };
 
   const handleCameraClick = () => {
@@ -106,7 +139,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
     setError('');
 
     // Validate: at least content or file must be provided
-    if (!content.trim() && !file) {
+    if (!content.trim() && !file && !fileData) {
       setError('Please provide either text content or an image (or both)');
       return;
     }
@@ -130,8 +163,18 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
       if (content.trim()) {
         formData.append('content', content.trim());
       }
-      if (file) {
-        formData.append('file', file);
+      
+      // Use stored file data if available (persists on iOS), otherwise use file
+      let fileToUpload: File | null = null;
+      if (fileData) {
+        // Create a new File from the stored blob to ensure it's valid
+        fileToUpload = new File([fileData.blob], fileData.name, { type: fileData.type });
+      } else if (file) {
+        fileToUpload = file;
+      }
+      
+      if (fileToUpload) {
+        formData.append('file', fileToUpload);
       }
       formData.append('groupIds', JSON.stringify(selectedGroupIds));
 
@@ -142,7 +185,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
           'Authorization': `Bearer ${token}`,
         },
         body: formData,
-        timeout: file ? 180000 : 30000, // 3 minutes for file uploads, 30s for text only
+        timeout: fileToUpload ? 180000 : 30000, // 3 minutes for file uploads, 30s for text only
         retries: 2,
         retryDelay: 2000,
       });
@@ -372,7 +415,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
 
       <button
         type="submit"
-        disabled={uploading || (!content.trim() && !file) || selectedGroupIds.length === 0}
+        disabled={uploading || (!content.trim() && !file && !fileData) || selectedGroupIds.length === 0}
         className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-base min-h-[48px] transition-all duration-200 shadow-md hover:shadow-lg"
       >
         {uploading ? (
