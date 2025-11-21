@@ -126,7 +126,18 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
         router.push('/home');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to upload image');
+      // imageApi.uploadImage now handles network errors better
+      // Extract user-friendly message from error
+      const errorMessage = err.message || 'Failed to upload image';
+      
+      // Provide more helpful messages for common errors
+      if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+        setError('Upload took too long. Please check your internet connection and try again with a smaller image.');
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setUploading(false);
     }

@@ -1,5 +1,8 @@
 // API utility functions for client-side requests
 
+// Import fetch utilities
+import { fetchWithRetry, isNetworkError, getErrorMessage } from './utils/fetchWithRetry';
+
 // Use relative URLs for API calls in the browser
 const API_BASE_URL = typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL || '');
 
@@ -334,27 +337,40 @@ export const imageApi = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch('/api/images/upload', {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
+    try {
+      // Use fetchWithRetry for better network error handling
+      // Increase timeout for large file uploads (3 minutes)
+      const response = await fetchWithRetry('/api/images/upload', {
+        method: 'POST',
+        headers,
+        body: formData,
+        timeout: 180000, // 3 minutes for large file uploads
+        retries: 2,
+        retryDelay: 2000, // 2 seconds between retries
+      });
 
-    if (!response.ok) {
-      // Handle 401 Unauthorized - redirect to login
-      if (response.status === 401 && typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        const currentPath = window.location.pathname;
-        if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
-          window.location.href = '/login';
+      if (!response.ok) {
+        // Handle 401 Unauthorized - redirect to login
+        if (response.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          const currentPath = window.location.pathname;
+          if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
+            window.location.href = '/login';
+          }
         }
+        const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+        throw error;
       }
-      const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors with better messages
+      if (isNetworkError(error)) {
+        throw { message: getErrorMessage(error) };
+      }
       throw error;
     }
-
-    return response.json();
   },
 
   getImageFeed: async (limit?: number, offset?: number) => {
@@ -438,27 +454,39 @@ export const strandApi = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch('/api/strands', {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
+    try {
+      // Use fetchWithRetry for better network error handling
+      const response = await fetchWithRetry('/api/strands', {
+        method: 'POST',
+        headers,
+        body: formData,
+        timeout: data.file ? 180000 : 30000, // 3 minutes for file uploads, 30s for text only
+        retries: 2,
+        retryDelay: 2000,
+      });
 
-    if (!response.ok) {
-      // Handle 401 Unauthorized - redirect to login
-      if (response.status === 401 && typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        const currentPath = window.location.pathname;
-        if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
-          window.location.href = '/login';
+      if (!response.ok) {
+        // Handle 401 Unauthorized - redirect to login
+        if (response.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          const currentPath = window.location.pathname;
+          if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
+            window.location.href = '/login';
+          }
         }
+        const error = await response.json().catch(() => ({ message: 'Failed to create strand' }));
+        throw error;
       }
-      const error = await response.json().catch(() => ({ message: 'Failed to create strand' }));
+
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors with better messages
+      if (isNetworkError(error)) {
+        throw { message: getErrorMessage(error) };
+      }
       throw error;
     }
-
-    return response.json();
   },
 
   updateStrand: async (id: string, data: { content?: string; file?: File; removeImage?: boolean }) => {
@@ -480,27 +508,39 @@ export const strandApi = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`/api/strands/${id}`, {
-      method: 'PUT',
-      headers,
-      body: formData,
-    });
+    try {
+      // Use fetchWithRetry for better network error handling
+      const response = await fetchWithRetry(`/api/strands/${id}`, {
+        method: 'PUT',
+        headers,
+        body: formData,
+        timeout: data.file ? 180000 : 30000, // 3 minutes for file uploads, 30s for text only
+        retries: 2,
+        retryDelay: 2000,
+      });
 
-    if (!response.ok) {
-      // Handle 401 Unauthorized - redirect to login
-      if (response.status === 401 && typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        const currentPath = window.location.pathname;
-        if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
-          window.location.href = '/login';
+      if (!response.ok) {
+        // Handle 401 Unauthorized - redirect to login
+        if (response.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          const currentPath = window.location.pathname;
+          if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
+            window.location.href = '/login';
+          }
         }
+        const error = await response.json().catch(() => ({ message: 'Failed to update strand' }));
+        throw error;
       }
-      const error = await response.json().catch(() => ({ message: 'Failed to update strand' }));
+
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors with better messages
+      if (isNetworkError(error)) {
+        throw { message: getErrorMessage(error) };
+      }
       throw error;
     }
-
-    return response.json();
   },
 
   deleteStrand: async (id: string) => {

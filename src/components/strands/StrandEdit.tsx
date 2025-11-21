@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Strand } from '@/types/strand';
 import { strandApi } from '@/lib/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { fetchWithRetry, isNetworkError, getErrorMessage } from '@/lib/utils/fetchWithRetry';
 
 interface StrandEditProps {
   strandId: string;
@@ -144,16 +145,20 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
         formData.append('removeImage', 'true');
       }
 
-      const response = await fetch(`/api/strands/${strandId}`, {
+      // Use fetchWithRetry for better network error handling
+      const response = await fetchWithRetry(`/api/strands/${strandId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
         body: formData,
+        timeout: file ? 180000 : 30000, // 3 minutes for file uploads, 30s for text only
+        retries: 2,
+        retryDelay: 2000,
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Failed to update strand' }));
         throw new Error(errorData.message || 'Failed to update strand');
       }
 
@@ -163,7 +168,11 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
         router.push('/home');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to update strand');
+      if (isNetworkError(err)) {
+        setError(getErrorMessage(err));
+      } else {
+        setError(err.message || 'Failed to update strand');
+      }
     } finally {
       setUpdating(false);
     }

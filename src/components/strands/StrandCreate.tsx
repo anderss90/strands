@@ -3,6 +3,7 @@
 import { useState, FormEvent, useRef, ChangeEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { groupApi, Group } from '@/lib/api';
+import { fetchWithRetry, isNetworkError, getErrorMessage } from '@/lib/utils/fetchWithRetry';
 
 interface StrandCreateProps {
   onSuccess?: () => void;
@@ -134,16 +135,20 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
       }
       formData.append('groupIds', JSON.stringify(selectedGroupIds));
 
-      const response = await fetch('/api/strands', {
+      // Use fetchWithRetry for better network error handling
+      const response = await fetchWithRetry('/api/strands', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
         body: formData,
+        timeout: file ? 180000 : 30000, // 3 minutes for file uploads, 30s for text only
+        retries: 2,
+        retryDelay: 2000,
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Failed to create strand' }));
         throw new Error(errorData.message || 'Failed to create strand');
       }
 
@@ -166,7 +171,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
         router.push('/home');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to create strand');
+      if (isNetworkError(err)) {
+        setError(getErrorMessage(err));
+      } else {
+        setError(err.message || 'Failed to create strand');
+      }
     } finally {
       setUploading(false);
     }
