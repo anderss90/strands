@@ -56,8 +56,14 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
+    // On iOS, file.type can be empty, so we also check the file extension
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(selectedFile.type)) {
+    const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase() || '';
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    const hasValidMimeType = selectedFile.type && allowedTypes.includes(selectedFile.type);
+    const hasValidExtension = allowedExtensions.includes(fileExtension);
+
+    if (!hasValidMimeType && !hasValidExtension) {
       setError('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
       return;
     }

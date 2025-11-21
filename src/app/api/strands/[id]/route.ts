@@ -272,11 +272,30 @@ export async function PUT(
     // Handle new image upload
     if (file) {
       // Validate file type
-      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      // On iOS, file.type can be empty, so we also check the file extension
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      const hasValidMimeType = file.type && ALLOWED_MIME_TYPES.includes(file.type);
+      const hasValidExtension = allowedExtensions.includes(fileExtension);
+      
+      if (!hasValidMimeType && !hasValidExtension) {
         return NextResponse.json(
           { message: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.' },
           { status: 400 }
         );
+      }
+      
+      // Normalize MIME type if it's missing but extension is valid
+      let normalizedMimeType = file.type;
+      if (!normalizedMimeType && hasValidExtension) {
+        const extensionToMime: Record<string, string> = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+        };
+        normalizedMimeType = extensionToMime[fileExtension] || 'image/jpeg';
       }
 
       // Validate file size
@@ -288,8 +307,8 @@ export async function PUT(
       }
 
       // Generate unique filename
-      const fileExtension = file.name.split('.').pop() || 'jpg';
-      const fileName = `${randomUUID()}.${fileExtension}`;
+      const finalFileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${randomUUID()}.${finalFileExtension}`;
       const fileBuffer = Buffer.from(await file.arrayBuffer());
 
       // Upload to Supabase Storage
@@ -299,7 +318,7 @@ export async function PUT(
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(storageBucket)
         .upload(fileName, fileBuffer, {
-          contentType: file.type,
+          contentType: normalizedMimeType,
           upsert: false,
         });
 
@@ -324,7 +343,7 @@ export async function PUT(
         `INSERT INTO images (user_id, image_url, thumbnail_url, file_name, file_size, mime_type)
          VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id`,
-        [authUser.userId, imageUrl, thumbnailUrl, file.name, file.size, file.type]
+        [authUser.userId, imageUrl, thumbnailUrl, file.name, file.size, normalizedMimeType]
       );
 
       newImageId = imageResult.rows[0].id;
