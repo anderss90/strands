@@ -218,17 +218,15 @@ export async function PUT(
       );
     }
 
-    const strand = strandCheck.rows[0];
+    const existingStrand = strandCheck.rows[0];
     
     // Check ownership (unless user is admin)
-    if (!authUser.isAdmin && strand.user_id !== authUser.userId) {
+    if (!authUser.isAdmin && existingStrand.user_id !== authUser.userId) {
       return NextResponse.json(
         { message: 'Access denied' },
         { status: 403 }
       );
     }
-
-    const existingStrand = strand;
 
     // Parse form data
     const formData = await request.formData();
@@ -378,17 +376,17 @@ export async function PUT(
       [trimmedContent, newImageId, strandId]
     );
 
-    const strand = updateResult.rows[0];
+    const updatedStrand = updateResult.rows[0];
 
     return NextResponse.json(
       {
-        id: strand.id,
-        userId: strand.user_id,
-        content: strand.content,
-        imageId: strand.image_id,
-        createdAt: strand.created_at,
-        updatedAt: strand.updated_at,
-        editedAt: strand.edited_at,
+        id: updatedStrand.id,
+        userId: updatedStrand.user_id,
+        content: updatedStrand.content,
+        imageId: updatedStrand.image_id,
+        createdAt: updatedStrand.created_at,
+        updatedAt: updatedStrand.updated_at,
+        editedAt: updatedStrand.edited_at,
       },
       { status: 200 }
     );
@@ -436,10 +434,10 @@ export async function DELETE(
       );
     }
 
-    const strand = strandCheck.rows[0];
+    const strandToDelete = strandCheck.rows[0];
     
     // Check ownership (unless user is admin)
-    if (!authUser.isAdmin && strand.user_id !== authUser.userId) {
+    if (!authUser.isAdmin && strandToDelete.user_id !== authUser.userId) {
       return NextResponse.json(
         { message: 'Access denied' },
         { status: 403 }
