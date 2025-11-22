@@ -9,6 +9,8 @@ export interface User {
   username: string;
   display_name: string;
   profile_picture_url: string | null;
+  is_admin?: boolean;
+  isAdmin?: boolean; // Alias for is_admin for convenience
   created_at: string;
   updated_at: string;
 }

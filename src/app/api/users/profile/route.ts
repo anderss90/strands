@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
     const user = await getUserById(authUser.userId);
 
     if (!user) {
@@ -31,8 +31,14 @@ export async function GET(request: NextRequest) {
 
     // Remove password hash from response
     const { password_hash: _, ...userWithoutPassword } = user;
+    
+    // Include isAdmin status from the authenticated user (which is fetched from DB in middleware)
+    const userWithAdmin = {
+      ...userWithoutPassword,
+      isAdmin: authUser.isAdmin,
+    };
 
-    return NextResponse.json(userWithoutPassword, { status: 200 });
+    return NextResponse.json(userWithAdmin, { status: 200 });
   } catch (error: any) {
     console.error('Get profile error:', error);
     return NextResponse.json(

@@ -575,6 +575,12 @@ export const strandApi = {
     });
   },
 
+  deleteStrandComment: async (strandId: string, commentId: string) => {
+    return apiRequest<{ message: string }>(`/api/strands/${strandId}/comments/${commentId}`, {
+      method: 'DELETE',
+    });
+  },
+
   // Fire reactions API
   addFire: async (strandId: string) => {
     return apiRequest<{ success: boolean; fireCount: number }>(`/api/strands/${strandId}/fire`, {

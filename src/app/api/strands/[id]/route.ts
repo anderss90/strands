@@ -202,23 +202,33 @@ export async function PUT(
       );
     }
 
-    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
     const strandId = params.id;
 
-    // Verify user owns the strand
-    const ownershipCheck = await query(
-      `SELECT id, content, image_id FROM strands WHERE id = $1 AND user_id = $2`,
-      [strandId, authUser.userId]
+    // Verify strand exists and user owns it (or is admin)
+    const strandCheck = await query(
+      `SELECT id, content, image_id, user_id FROM strands WHERE id = $1`,
+      [strandId]
     );
 
-    if (ownershipCheck.rows.length === 0) {
+    if (strandCheck.rows.length === 0) {
       return NextResponse.json(
-        { message: 'Strand not found or access denied' },
+        { message: 'Strand not found' },
         { status: 404 }
       );
     }
 
-    const existingStrand = ownershipCheck.rows[0];
+    const strand = strandCheck.rows[0];
+    
+    // Check ownership (unless user is admin)
+    if (!authUser.isAdmin && strand.user_id !== authUser.userId) {
+      return NextResponse.json(
+        { message: 'Access denied' },
+        { status: 403 }
+      );
+    }
+
+    const existingStrand = strand;
 
     // Parse form data
     const formData = await request.formData();
@@ -410,19 +420,29 @@ export async function DELETE(
       );
     }
 
-    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
     const strandId = params.id;
 
-    // Verify user owns the strand
-    const ownershipCheck = await query(
-      `SELECT id FROM strands WHERE id = $1 AND user_id = $2`,
-      [strandId, authUser.userId]
+    // Verify strand exists
+    const strandCheck = await query(
+      `SELECT id, user_id FROM strands WHERE id = $1`,
+      [strandId]
     );
 
-    if (ownershipCheck.rows.length === 0) {
+    if (strandCheck.rows.length === 0) {
       return NextResponse.json(
-        { message: 'Strand not found or access denied' },
+        { message: 'Strand not found' },
         { status: 404 }
+      );
+    }
+
+    const strand = strandCheck.rows[0];
+    
+    // Check ownership (unless user is admin)
+    if (!authUser.isAdmin && strand.user_id !== authUser.userId) {
+      return NextResponse.json(
+        { message: 'Access denied' },
+        { status: 403 }
       );
     }
 
