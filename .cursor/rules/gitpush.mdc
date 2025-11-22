@@ -1,0 +1,4 @@
+---
+Push changed to git if a remote has been set up
+alwaysApply: true
+---

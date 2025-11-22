@@ -1,0 +1,217 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { authenticateRequest } from '@/lib/middleware';
+import { query } from '@/lib/db';
+import { createServerSupabase } from '@/lib/supabase';
+import { randomUUID } from 'crypto';
+import { uploadImageSchema } from '@/lib/validation';
+
+// Maximum file size: 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+
+export async function POST(request: NextRequest) {
+  try {
+    const authResult = await authenticateRequest(request);
+    
+    if (authResult && typeof authResult === 'object' && 'status' in authResult && authResult.status !== 200) {
+      return authResult as NextResponse;
+    }
+
+    if (!authResult || typeof authResult !== 'object' || !('user' in authResult)) {
+      return NextResponse.json(
+        { message: 'Authorization token is required' },
+        { status: 401 }
+      );
+    }
+
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    
+    // Parse form data
+    const formData = await request.formData();
+    const file = formData.get('file') as File | null;
+    const groupIdsJson = formData.get('groupIds') as string | null;
+
+    if (!file) {
+      return NextResponse.json(
+        { message: 'File is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    // On iOS, file.type can be empty, so we also check the file extension
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    const hasValidMimeType = file.type && ALLOWED_MIME_TYPES.includes(file.type);
+    const hasValidExtension = allowedExtensions.includes(fileExtension);
+    
+    if (!hasValidMimeType && !hasValidExtension) {
+      return NextResponse.json(
+        { message: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.' },
+        { status: 400 }
+      );
+    }
+    
+    // Normalize MIME type if it's missing but extension is valid
+    let normalizedMimeType = file.type;
+    if (!normalizedMimeType && hasValidExtension) {
+      const extensionToMime: Record<string, string> = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+      };
+      normalizedMimeType = extensionToMime[fileExtension] || 'image/jpeg';
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { message: `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB` },
+        { status: 400 }
+      );
+    }
+
+    // Parse and validate group IDs
+    let groupIds: string[] = [];
+    if (groupIdsJson) {
+      try {
+        groupIds = JSON.parse(groupIdsJson);
+        const validatedData = uploadImageSchema.parse({ groupIds });
+        groupIds = validatedData.groupIds;
+      } catch (error: any) {
+        if (error.name === 'ZodError') {
+          return NextResponse.json(
+            { message: 'Validation error', errors: error.errors },
+            { status: 400 }
+          );
+        }
+        return NextResponse.json(
+          { message: 'Invalid group IDs format' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Verify user is a member of all groups
+    if (groupIds.length > 0) {
+      try {
+        const membershipCheck = await query(
+          `SELECT group_id FROM group_members
+           WHERE user_id = $1 AND group_id = ANY($2::uuid[])`,
+          [authUser.userId, groupIds]
+        );
+
+        // Extract group IDs and handle potential string/UUID conversion
+        const memberGroupIds = membershipCheck.rows.map(row => {
+          const groupId = row.group_id;
+          // Convert to string if it's not already (handles UUID type from PostgreSQL)
+          return typeof groupId === 'string' ? groupId : String(groupId);
+        });
+        
+        // Convert all input group IDs to strings for comparison
+        const groupIdsAsStrings = groupIds.map(id => String(id));
+        const invalidGroupIds = groupIdsAsStrings.filter(id => !memberGroupIds.includes(id));
+
+        if (invalidGroupIds.length > 0) {
+          return NextResponse.json(
+            { message: 'You are not a member of one or more specified groups' },
+            { status: 403 }
+          );
+        }
+      } catch (membershipError: any) {
+        console.error('Membership check error:', membershipError);
+        return NextResponse.json(
+          { message: 'Failed to verify group membership' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Generate unique filename
+    const finalFileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${randomUUID()}.${finalFileExtension}`;
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+    // Upload to Supabase Storage
+    const supabase = createServerSupabase();
+    const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'images';
+    
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(storageBucket)
+      .upload(fileName, fileBuffer, {
+        contentType: normalizedMimeType,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('Supabase Storage upload error:', uploadError);
+      return NextResponse.json(
+        { message: 'Failed to upload image to storage' },
+        { status: 500 }
+      );
+    }
+
+    // Get public URL for the uploaded image
+    const { data: urlData } = supabase.storage
+      .from(storageBucket)
+      .getPublicUrl(fileName);
+
+    const imageUrl = urlData.publicUrl;
+    // For now, thumbnail is the same as image
+    // In production, generate a thumbnail using sharp or similar
+    const thumbnailUrl = imageUrl;
+
+    // Save image metadata to database
+    const imageResult = await query(
+      `INSERT INTO images (user_id, image_url, thumbnail_url, file_name, file_size, mime_type)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [authUser.userId, imageUrl, thumbnailUrl, file.name, file.size, normalizedMimeType]
+    );
+
+    const image = imageResult.rows[0];
+
+    // Create image group shares
+    if (groupIds.length > 0) {
+      for (const groupId of groupIds) {
+        await query(
+          `INSERT INTO image_group_shares (image_id, group_id)
+           VALUES ($1, $2)
+           ON CONFLICT (image_id, group_id) DO NOTHING`,
+          [image.id, groupId]
+        );
+      }
+    }
+
+    return NextResponse.json(
+      {
+        id: image.id,
+        userId: image.user_id,
+        imageUrl: image.image_url,
+        thumbnailUrl: image.thumbnail_url,
+        fileName: image.file_name,
+        fileSize: image.file_size,
+        mimeType: image.mime_type,
+        createdAt: image.created_at,
+        groupIds,
+      },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    if (error.name === 'ZodError') {
+      return NextResponse.json(
+        { message: 'Validation error', errors: error.errors },
+        { status: 400 }
+      );
+    }
+
+    console.error('Image upload error:', error);
+    return NextResponse.json(
+      { message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
