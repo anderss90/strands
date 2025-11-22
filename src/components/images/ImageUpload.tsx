@@ -65,11 +65,39 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
     setFile(selectedFile);
     setError('');
 
-    // Create preview
+    // Create preview with proper error handling
     const reader = new FileReader();
+    
     reader.onloadend = () => {
-      setPreview(reader.result as string);
+      if (reader.result) {
+        setPreview(reader.result as string);
+      } else {
+        console.error('FileReader: No result');
+        setError('Failed to generate preview. Please try again.');
+        setFile(null);
+        setPreview(null);
+        if (cameraInputRef.current) {
+          cameraInputRef.current.value = '';
+        }
+        if (galleryInputRef.current) {
+          galleryInputRef.current.value = '';
+        }
+      }
     };
+    
+    reader.onerror = () => {
+      console.error('FileReader error:', reader.error);
+      setError('Failed to read file for preview. Please try again.');
+      setFile(null);
+      setPreview(null);
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
+      }
+      if (galleryInputRef.current) {
+        galleryInputRef.current.value = '';
+      }
+    };
+    
     reader.readAsDataURL(selectedFile);
   };
 

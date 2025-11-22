@@ -104,15 +104,37 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
       setRemoveImage(false); // If uploading new image, don't remove
       setError('');
 
-      // Create preview
+      // Create preview from the blob (more reliable than re-reading the file)
       const reader = new FileReader();
+      
       reader.onloadend = () => {
-        setPreview(reader.result as string);
+        if (reader.result) {
+          setPreview(reader.result as string);
+        } else {
+          console.error('FileReader: No result');
+          setError('Failed to generate preview. Please try again.');
+          setFile(null);
+          setFileData(null);
+          setPreview(null);
+        }
       };
-      reader.readAsDataURL(selectedFile);
+      
+      reader.onerror = () => {
+        console.error('FileReader error:', reader.error);
+        setError('Failed to read file for preview. Please try again.');
+        setFile(null);
+        setFileData(null);
+        setPreview(null);
+      };
+      
+      // Use the blob we already created instead of re-reading the file
+      reader.readAsDataURL(blob);
     } catch (err: any) {
       setError('Failed to read file. Please try again.');
       console.error('Error reading file:', err);
+      setFile(null);
+      setFileData(null);
+      setPreview(null);
     }
   };
 
