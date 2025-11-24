@@ -17,6 +17,7 @@ export default function BottomNav() {
     { href: '/friends', label: 'Friends', icon: '👥' },
     { href: '/groups', label: 'Groups', icon: '👨‍👩‍👧‍👦' },
     { href: '/upload', label: 'Upload', icon: '📷' },
+    { href: '/console', label: 'Console', icon: '🖥️' },
     { href: '/profile', label: 'Profile', icon: '👤' },
   ];
 
@@ -38,10 +39,10 @@ export default function BottomNav() {
               {isActive && (
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></div>
               )}
-              <span className={`text-2xl mb-1 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
+              <span className={`text-xl mb-1 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
                 {item.icon}
               </span>
-              <span className={`text-xs font-medium transition-colors duration-200 ${isActive ? 'font-semibold' : ''}`}>
+              <span className={`text-[10px] font-medium transition-colors duration-200 ${isActive ? 'font-semibold' : ''}`}>
                 {item.label}
               </span>
             </Link>
