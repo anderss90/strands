@@ -178,16 +178,16 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+        accept="image/*"
         onChange={handleFileChange}
         className="hidden"
-        capture="environment" // Opens camera on mobile
+        capture="environment"
       />
-      {/* Gallery input - opens gallery/file picker */}
+      {/* Gallery input - opens gallery/file picker (no capture attribute for Android compatibility) */}
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+        accept="image/*"
         onChange={handleFileChange}
         className="hidden"
       />

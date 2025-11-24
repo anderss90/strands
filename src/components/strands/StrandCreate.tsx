@@ -249,18 +249,20 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Hidden file inputs */}
+      {/* Camera input - opens camera on mobile */}
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+        accept="image/*"
         onChange={handleFileChange}
         className="hidden"
         capture="environment"
       />
+      {/* Gallery input - opens gallery/file picker (no capture attribute for Android compatibility) */}
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+        accept="image/*"
         onChange={handleFileChange}
         className="hidden"
       />
