@@ -22,6 +22,18 @@ export interface CompressionOptions {
  * @param options - Optional compression settings
  * @returns Compressed File object
  */
+/**
+ * Check if web workers are available
+ */
+function isWebWorkerSupported(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return typeof Worker !== 'undefined';
+  } catch {
+    return false;
+  }
+}
+
 export async function compressImage(
   file: File,
   options: CompressionOptions = {}
@@ -33,18 +45,38 @@ export async function compressImage(
   }
 
   console.log(`Compressing image: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+  
+  // Check web worker support
+  const webWorkerSupported = isWebWorkerSupported();
+  if (!webWorkerSupported) {
+    console.log('Web workers not supported, compression will run on main thread');
+  }
 
-  const compressionOptions = {
+  // Try compression with web worker first, fallback to no web worker if it fails
+  // Disable web worker if not supported or explicitly disabled
+  const shouldUseWebWorker = webWorkerSupported && options.useWebWorker !== false;
+  
+  let compressionOptions = {
     maxSizeMB: options.maxSizeMB || MAX_FILE_SIZE / 1024 / 1024, // Convert to MB
     maxWidthOrHeight: options.maxWidthOrHeight || MAX_WIDTH_OR_HEIGHT,
-    useWebWorker: options.useWebWorker !== false, // Use web worker by default for better performance
+    useWebWorker: shouldUseWebWorker, // Only use web worker if supported
     fileType: file.type || 'image/jpeg', // Default to JPEG for better compression
     initialQuality: COMPRESSION_QUALITY,
     onProgress: options.onProgress,
   };
 
   try {
-    const compressedFile = await imageCompression(file, compressionOptions);
+    let compressedFile: File;
+    
+    try {
+      // First attempt with web worker
+      compressedFile = await imageCompression(file, compressionOptions);
+    } catch (webWorkerError: any) {
+      // If web worker fails, try without web worker
+      console.warn('Web worker compression failed, trying without web worker:', webWorkerError);
+      compressionOptions.useWebWorker = false;
+      compressedFile = await imageCompression(file, compressionOptions);
+    }
     
     const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
     const compressedSizeMB = (compressedFile.size / 1024 / 1024).toFixed(2);
@@ -61,22 +93,41 @@ export async function compressImage(
         maxSizeMB: MAX_FILE_SIZE / 1024 / 1024,
         maxWidthOrHeight: 1280, // Smaller max dimension
         initialQuality: 0.6, // Lower quality
+        useWebWorker: false, // Disable web worker for aggressive compression
       };
       
-      const moreCompressed = await imageCompression(file, aggressiveOptions);
-      
-      const finalSizeMB = (moreCompressed.size / 1024 / 1024).toFixed(2);
-      const finalReduction = ((1 - moreCompressed.size / file.size) * 100).toFixed(1);
-      console.log(`Aggressive compression: ${originalSizeMB}MB → ${finalSizeMB}MB (${finalReduction}% reduction)`);
-      
-      return moreCompressed;
+      try {
+        const moreCompressed = await imageCompression(file, aggressiveOptions);
+        
+        const finalSizeMB = (moreCompressed.size / 1024 / 1024).toFixed(2);
+        const finalReduction = ((1 - moreCompressed.size / file.size) * 100).toFixed(1);
+        console.log(`Aggressive compression: ${originalSizeMB}MB → ${finalSizeMB}MB (${finalReduction}% reduction)`);
+        
+        return moreCompressed;
+      } catch (aggressiveError) {
+        // If aggressive compression also fails, return the first compressed result
+        // (even if it's slightly over the limit, it's better than nothing)
+        console.warn('Aggressive compression failed, using initial compression result:', aggressiveError);
+        return compressedFile;
+      }
     }
 
     return compressedFile;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Image compression failed:', error);
-    // If compression fails, return original file (will be rejected by server if too large)
-    throw new Error('Failed to compress image. Please try a smaller image.');
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to compress image. ';
+    if (error.message?.includes('Worker')) {
+      errorMessage += 'Web worker is not available. ';
+    } else if (error.message?.includes('memory') || error.message?.includes('Memory')) {
+      errorMessage += 'Image is too large for your device. ';
+    } else if (error.message?.includes('type') || error.message?.includes('format')) {
+      errorMessage += 'Image format not supported. ';
+    }
+    errorMessage += 'Please try a smaller image or a different format.';
+    
+    throw new Error(errorMessage);
   }
 }
 
