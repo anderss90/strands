@@ -69,9 +69,9 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
       return;
     }
 
-    const maxSize = 10 * 1024 * 1024;
+    const maxSize = 4 * 1024 * 1024; // 4MB - Vercel limit
     if (selectedFile.size > maxSize) {
-      setError(`File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB`);
+      setError(`File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB. Please choose a smaller image or compress it.`);
       return;
     }
 
@@ -236,7 +236,28 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
       });
 
       if (!response.ok) {
+        // Handle 413 Payload Too Large specifically
+        if (response.status === 413) {
+          const errorData = await response.json().catch(() => ({ 
+            message: 'File size exceeds maximum allowed size of 4MB. Please choose a smaller image or compress it.' 
+          }));
+          console.error('Strand update failed - File too large:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData,
+            url: `/api/strands/${strandId}`,
+            fileSize: fileToUpload?.size,
+          });
+          throw new Error(errorData.message || 'File size exceeds maximum allowed size of 4MB. Please choose a smaller image or compress it.');
+        }
+        
         const errorData = await response.json().catch(() => ({ message: 'Failed to update strand' }));
+        console.error('Strand update failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+          url: `/api/strands/${strandId}`,
+        });
         throw new Error(errorData.message || 'Failed to update strand');
       }
 

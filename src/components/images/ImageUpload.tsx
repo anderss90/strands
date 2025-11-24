@@ -57,10 +57,10 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
       return;
     }
 
-    // Validate file size (10MB)
-    const maxSize = 10 * 1024 * 1024;
+    // Validate file size (4MB - Vercel limit)
+    const maxSize = 4 * 1024 * 1024;
     if (selectedFile.size > maxSize) {
-      setError(`File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB`);
+      setError(`File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB. Please choose a smaller image or compress it.`);
       return;
     }
 

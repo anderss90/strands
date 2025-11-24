@@ -5,8 +5,8 @@ import { createServerSupabase } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
 import { updateStrandSchema } from '@/lib/validation';
 
-// Maximum file size: 10MB
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// Maximum file size: 4MB (Vercel has a 4.5MB body size limit for serverless functions)
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
 // GET /api/strands/[id] - Get a specific strand
