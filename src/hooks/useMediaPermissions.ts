@@ -46,7 +46,21 @@ export function useMediaPermissions() {
     try {
       setState(prev => ({ ...prev, isChecking: true }));
 
-      // Query camera permission (affects photo access on mobile)
+      // Detect Android - Android browsers handle permissions differently
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      
+      // On Android, don't check camera permissions for gallery access
+      // File inputs handle permissions independently
+      if (isAndroid) {
+        setState({
+          cameraPermission: 'unsupported',
+          isChecking: false,
+          isSupported: false, // Don't use Permissions API on Android for gallery
+        });
+        return;
+      }
+
+      // Query camera permission (affects photo access on mobile, mainly iOS)
       const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
       
       let permission: PermissionState = 'unsupported';
@@ -78,7 +92,7 @@ export function useMediaPermissions() {
       });
     } catch (error) {
       // Permissions API might not support 'camera' permission name in this browser
-      // This is common on some iOS versions or older browsers
+      // This is common on some iOS versions, Android browsers, or older browsers
       console.log('Permissions API check failed, will rely on implicit permissions:', error);
       setState({
         cameraPermission: 'unsupported',
@@ -131,23 +145,35 @@ export function useMediaPermissions() {
 
   const requestGalleryAccess = async (): Promise<{ success: boolean; error?: string }> => {
     // On web, gallery access is typically granted implicitly when user interacts with file input
-    // However, we can check camera permission as it often affects photo access on mobile
+    // Android browsers handle file input permissions independently - they don't require camera permission
+    // iOS Safari may require camera permission for photo access, but we should be lenient
     
+    // Detect Android - Android browsers handle file inputs differently
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    
+    // On Android, file inputs handle permissions automatically - no need to check
+    if (isAndroid) {
+      return { success: true };
+    }
+
+    // For iOS and other platforms, check permissions but be lenient
     if (state.cameraPermission === 'granted') {
       return { success: true };
     }
 
+    // Don't block on denied - let the file input try (it may still work)
+    // Some browsers deny camera permission but still allow file input access
     if (state.cameraPermission === 'denied') {
-      return {
-        success: false,
-        error: 'Gallery access is blocked. Please enable camera/media permissions in your browser settings.',
-      };
+      // Allow file input to try - it may still work even if camera permission is denied
+      // The file input will show its own permission dialog if needed
+      return { success: true };
     }
 
     // Try to request permission if needed and supported
     if (state.isSupported && state.cameraPermission === 'prompt') {
       const result = await requestCameraPermission();
-      return result;
+      // Even if camera permission fails, allow file input to try
+      return { success: true };
     }
 
     // If unsupported or prompt, allow the file input to handle permissions
