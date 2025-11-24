@@ -226,7 +226,14 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to create strand' }));
-        throw new Error(errorData.message || 'Failed to create strand');
+        const errorMessage = errorData.message || 'Failed to create strand';
+        console.error('Strand creation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+          url: '/api/strands',
+        });
+        throw new Error(errorMessage);
       }
 
       // Reset form
@@ -248,11 +255,14 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
         router.push('/home');
       }
     } catch (err: any) {
-      if (isNetworkError(err)) {
-        setError(getErrorMessage(err));
-      } else {
-        setError(err.message || 'Failed to create strand');
-      }
+      const errorMessage = isNetworkError(err) ? getErrorMessage(err) : (err.message || 'Failed to create strand');
+      console.error('Error creating strand:', {
+        error: err,
+        message: errorMessage,
+        isNetworkError: isNetworkError(err),
+        stack: err.stack,
+      });
+      setError(errorMessage);
     } finally {
       setUploading(false);
     }

@@ -10,94 +10,78 @@ interface ConsoleMessage {
   args?: any[];
 }
 
+const STORAGE_KEY = 'console_messages';
+
 export default function Console() {
   const [messages, setMessages] = useState<ConsoleMessage[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageIdRef = useRef(0);
 
+  // Load messages from localStorage on mount
   useEffect(() => {
-    // Store original console methods
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalWarn = console.warn;
-    const originalInfo = console.info;
-    const originalDebug = console.debug;
+    const loadMessages = () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const converted = parsed.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          }));
+          setMessages(converted);
+        }
+      } catch (error) {
+        console.error('Failed to load console messages from storage:', error);
+      }
+    };
 
-    // Override console methods
-    const addMessage = (type: ConsoleMessage['type'], ...args: any[]) => {
-      const message = args
-        .map(arg => {
-          if (typeof arg === 'object') {
-            try {
-              return JSON.stringify(arg, null, 2);
-            } catch {
-              return String(arg);
+    loadMessages();
+
+    // Listen for new messages from ConsoleCapture
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          const converted = parsed.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          }));
+          setMessages(converted);
+        } catch (error) {
+          console.error('Failed to parse console messages from storage:', error);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also poll for changes (in case storage event doesn't fire for same-window updates)
+    const interval = setInterval(() => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setMessages(prev => {
+            // Only update if messages have changed
+            if (prev.length !== parsed.length || 
+                (prev.length > 0 && prev[prev.length - 1].id !== parsed[parsed.length - 1].id)) {
+              return parsed.map((msg: any) => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp),
+              }));
             }
-          }
-          return String(arg);
-        })
-        .join(' ');
+            return prev;
+          });
+        }
+      } catch (error) {
+        // Ignore errors
+      }
+    }, 500); // Check every 500ms
 
-      setMessages(prev => {
-        const newMessage: ConsoleMessage = {
-          id: `msg-${messageIdRef.current++}`,
-          type,
-          message,
-          timestamp: new Date(),
-          args: args.length > 1 ? args : undefined,
-        };
-        return [...prev, newMessage].slice(-1000); // Keep last 1000 messages
-      });
-    };
-
-    console.log = (...args: any[]) => {
-      originalLog(...args);
-      addMessage('log', ...args);
-    };
-
-    console.error = (...args: any[]) => {
-      originalError(...args);
-      addMessage('error', ...args);
-    };
-
-    console.warn = (...args: any[]) => {
-      originalWarn(...args);
-      addMessage('warn', ...args);
-    };
-
-    console.info = (...args: any[]) => {
-      originalInfo(...args);
-      addMessage('info', ...args);
-    };
-
-    console.debug = (...args: any[]) => {
-      originalDebug(...args);
-      addMessage('debug', ...args);
-    };
-
-    // Capture unhandled errors
-    const handleError = (event: ErrorEvent) => {
-      addMessage('error', `Unhandled Error: ${event.message}`, event.filename, event.lineno);
-    };
-
-    // Capture unhandled promise rejections
-    const handleRejection = (event: PromiseRejectionEvent) => {
-      addMessage('error', `Unhandled Promise Rejection: ${event.reason}`);
-    };
-
-    window.addEventListener('error', handleError);
-    window.addEventListener('unhandledrejection', handleRejection);
-
-    // Restore original methods on cleanup
     return () => {
-      console.log = originalLog;
-      console.error = originalError;
-      console.warn = originalWarn;
-      console.info = originalInfo;
-      console.debug = originalDebug;
-      window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleRejection);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
     };
   }, []);
 
@@ -110,6 +94,11 @@ export default function Console() {
 
   const clearMessages = () => {
     setMessages([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear console messages from storage:', error);
+    }
   };
 
   const getMessageColor = (type: ConsoleMessage['type']) => {

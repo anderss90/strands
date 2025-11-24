@@ -52,6 +52,21 @@ export async function fetchWithRetry(
     } catch (error: any) {
       lastError = error;
 
+      // Log the error
+      if (attempt === 0) {
+        console.error('Fetch error (attempt 1):', {
+          url,
+          error: error.message || error,
+          name: error.name,
+          isNetworkError: isNetworkError(error),
+        });
+      } else {
+        console.warn(`Fetch retry attempt ${attempt + 1}/${retries + 1}:`, {
+          url,
+          error: error.message || error,
+        });
+      }
+
       // Don't retry on the last attempt
       if (attempt < retries) {
         // Only retry on network errors, not on server errors (4xx, 5xx)
@@ -68,6 +83,11 @@ export async function fetchWithRetry(
       }
 
       // If it's not a network error or we've exhausted retries, throw
+      console.error('Fetch failed after all retries:', {
+        url,
+        error: error.message || error,
+        attempts: attempt + 1,
+      });
       throw error;
     }
   }
