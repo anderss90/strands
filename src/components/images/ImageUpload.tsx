@@ -4,6 +4,7 @@ import { useState, FormEvent, useRef, ChangeEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { imageApi, groupApi, Group } from '@/lib/api';
 import { useMediaPermissions } from '@/hooks/useMediaPermissions';
+import { compressImage, needsCompression } from '@/lib/utils/imageCompression';
 
 interface ImageUploadProps {
   onSuccess?: () => void;
@@ -18,6 +19,7 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -41,7 +43,7 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
     }
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
@@ -57,18 +59,22 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
       return;
     }
 
-    // Validate file size (4MB - Vercel limit)
-    const maxSize = 4 * 1024 * 1024;
-    if (selectedFile.size > maxSize) {
-      setError(`File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB. Please choose a smaller image or compress it.`);
-      return;
-    }
+    try {
+      setCompressing(true);
+      setError('');
 
-    setFile(selectedFile);
-    setError('');
+      // Compress image if needed (automatically handles files over 4MB)
+      let processedFile = selectedFile;
+      if (needsCompression(selectedFile)) {
+        console.log('Image exceeds size limit, compressing...');
+        processedFile = await compressImage(selectedFile);
+      }
 
-    // Create preview with proper error handling
-    const reader = new FileReader();
+      setFile(processedFile);
+      setError('');
+
+      // Create preview with proper error handling
+      const reader = new FileReader();
     
     reader.onloadend = () => {
       if (reader.result) {
@@ -100,7 +106,21 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
       }
     };
     
-    reader.readAsDataURL(selectedFile);
+      reader.readAsDataURL(processedFile);
+    } catch (err: any) {
+      setError(err.message || 'Failed to process image. Please try again.');
+      console.error('Error processing file:', err);
+      setFile(null);
+      setPreview(null);
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
+      }
+      if (galleryInputRef.current) {
+        galleryInputRef.current.value = '';
+      }
+    } finally {
+      setCompressing(false);
+    }
   };
 
   const handleCameraClick = () => {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { groupApi, Group } from '@/lib/api';
 import { fetchWithRetry, isNetworkError, getErrorMessage } from '@/lib/utils/fetchWithRetry';
 import { useMediaPermissions } from '@/hooks/useMediaPermissions';
+import { compressImage, needsCompression } from '@/lib/utils/imageCompression';
 
 interface StrandCreateProps {
   onSuccess?: () => void;
@@ -22,6 +23,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -72,20 +74,24 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
       return;
     }
 
-    const maxSize = 4 * 1024 * 1024; // 4MB - Vercel limit
-    if (selectedFile.size > maxSize) {
-      setError(`File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB. Please choose a smaller image or compress it.`);
-      return;
-    }
-
     try {
+      setCompressing(true);
+      setError('');
+
+      // Compress image if needed (automatically handles files over 4MB)
+      let processedFile = selectedFile;
+      if (needsCompression(selectedFile)) {
+        console.log('Image exceeds size limit, compressing...');
+        processedFile = await compressImage(selectedFile);
+      }
+
       // On iOS, File objects can become invalid after navigation
       // Read file into memory immediately to persist it
-      const arrayBuffer = await selectedFile.arrayBuffer();
-      const blob = new Blob([arrayBuffer], { type: selectedFile.type || `image/${fileExtension}` });
+      const arrayBuffer = await processedFile.arrayBuffer();
+      const blob = new Blob([arrayBuffer], { type: processedFile.type || `image/${fileExtension}` });
       
       // Determine MIME type (normalize if missing)
-      let normalizedMimeType = selectedFile.type;
+      let normalizedMimeType = processedFile.type;
       if (!normalizedMimeType && hasValidExtension) {
         const extensionToMime: Record<string, string> = {
           'jpg': 'image/jpeg',
@@ -100,12 +106,12 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
       // Store file data for persistence
       setFileData({
         blob: blob,
-        name: selectedFile.name,
+        name: processedFile.name,
         type: normalizedMimeType,
       });
       
-      // Keep the original File object for now
-      setFile(selectedFile);
+      // Keep the processed File object
+      setFile(processedFile);
       setError('');
 
       // Create preview from the blob (more reliable than re-reading the file)
@@ -134,11 +140,19 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
       // Use the blob we already created instead of re-reading the file
       reader.readAsDataURL(blob);
     } catch (err: any) {
-      setError('Failed to read file. Please try again.');
-      console.error('Error reading file:', err);
+      setError(err.message || 'Failed to process image. Please try again.');
+      console.error('Error processing file:', err);
       setFile(null);
       setFileData(null);
       setPreview(null);
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
+      }
+      if (galleryInputRef.current) {
+        galleryInputRef.current.value = '';
+      }
+    } finally {
+      setCompressing(false);
     }
   };
 
@@ -328,6 +342,12 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
         <label className="block text-sm font-medium text-gray-300 mb-2">
           Image (optional)
         </label>
+        {compressing && (
+          <div className="mb-3 p-3 bg-blue-900/20 border border-blue-700 text-blue-400 rounded-lg text-sm flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+            Compressing image to reduce file size...
+          </div>
+        )}
         {!preview ? (
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -479,13 +499,18 @@ export default function StrandCreate({ onSuccess, preselectedGroupId }: StrandCr
 
       <button
         type="submit"
-        disabled={uploading || (!content.trim() && !file && !fileData) || selectedGroupIds.length === 0}
+        disabled={uploading || compressing || (!content.trim() && !file && !fileData) || selectedGroupIds.length === 0}
         className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-base min-h-[48px] transition-all duration-200 shadow-md hover:shadow-lg"
       >
         {uploading ? (
           <span className="flex items-center justify-center gap-2">
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             Creating...
+          </span>
+        ) : compressing ? (
+          <span className="flex items-center justify-center gap-2">
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            Compressing Image...
           </span>
         ) : (
           'Create Strand'
