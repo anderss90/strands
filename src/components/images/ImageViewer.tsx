@@ -20,6 +20,7 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [deletingComment, setDeletingComment] = useState<string | null>(null);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -89,6 +90,34 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Are you sure you want to delete this comment?')) {
+      return;
+    }
+
+    try {
+      setDeletingComment(commentId);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      const response = await fetch(`/api/images/${imageId}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete comment');
+      }
+
+      // Remove comment from local state
+      setComments(prev => prev.filter(c => c.id !== commentId));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete comment');
+    } finally {
+      setDeletingComment(null);
+    }
+  };
+
   const handleClose = () => {
     if (onClose) {
       onClose();
@@ -125,6 +154,8 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
   }
 
   const isOwner = user?.id === image.userId;
+  const isAdmin = user?.isAdmin || user?.is_admin || false;
+  const canDeleteImage = isOwner || isAdmin;
 
   return (
     <div className="fixed inset-x-0 top-0 bottom-16 bg-black z-[100] flex flex-col animate-fade-in overflow-hidden">
@@ -151,11 +182,12 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
         <div className="flex-1 text-white text-center font-medium">
           {image.user?.displayName || 'Image'}
         </div>
-        {isOwner && (
+        {canDeleteImage && (
           <button
             onClick={handleDelete}
             disabled={deleting}
             className="text-red-500 p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50 transition-all duration-200 active:scale-95"
+            title={isAdmin && !isOwner ? "Delete image (Admin)" : "Delete image"}
           >
             {deleting ? (
               <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
@@ -176,7 +208,7 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
             )}
           </button>
         )}
-        {!isOwner && <div className="w-[44px]" />}
+        {!canDeleteImage && <div className="w-[44px]" />}
       </div>
 
       {/* Scrollable Content Area - Everything scrolls together */}
@@ -273,31 +305,67 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
             ) : comments.length === 0 ? (
               <p className="text-gray-400 text-sm text-center py-4">No comments yet</p>
             ) : (
-              comments.map((comment) => (
-                <div key={comment.id} className="flex gap-2 animate-fade-in">
-                  {comment.user.profilePictureUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={comment.user.profilePictureUrl}
-                      alt={comment.user.displayName}
-                      className="w-8 h-8 rounded-full flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-medium">
-                      {comment.user.displayName.charAt(0).toUpperCase()}
+              comments.map((comment) => {
+                const isCommentOwner = user?.id === comment.userId;
+                const isCommentAdmin = user?.isAdmin || user?.is_admin || false;
+                const canDeleteComment = isCommentOwner || isCommentAdmin;
+                
+                return (
+                  <div key={comment.id} className="flex gap-2 animate-fade-in">
+                    {comment.user.profilePictureUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={comment.user.profilePictureUrl}
+                        alt={comment.user.displayName}
+                        className="w-8 h-8 rounded-full flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-medium">
+                        {comment.user.displayName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="bg-white/10 rounded-lg p-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-xs mb-1">{comment.user.displayName}</p>
+                            <p className="text-sm break-words text-gray-300">{comment.content}</p>
+                          </div>
+                          {canDeleteComment && (
+                            <button
+                              onClick={() => handleDeleteComment(comment.id)}
+                              disabled={deletingComment === comment.id}
+                              className="text-red-400 hover:text-red-300 p-1 rounded transition-all duration-200 active:scale-95 disabled:opacity-50 flex-shrink-0"
+                              title={isCommentAdmin && !isCommentOwner ? "Delete comment (Admin)" : "Delete comment"}
+                            >
+                              {deletingComment === comment.id ? (
+                                <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-gray-400 text-xs mt-1 ml-2">
+                        {new Date(comment.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="bg-white/10 rounded-lg p-2">
-                      <p className="font-medium text-xs mb-1">{comment.user.displayName}</p>
-                      <p className="text-sm break-words text-gray-300">{comment.content}</p>
-                    </div>
-                    <p className="text-gray-400 text-xs mt-1 ml-2">
-                      {new Date(comment.createdAt).toLocaleDateString()}
-                    </p>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

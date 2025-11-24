@@ -6,6 +6,7 @@ import { Strand } from '@/types/strand';
 import { strandApi } from '@/lib/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { fetchWithRetry, isNetworkError, getErrorMessage } from '@/lib/utils/fetchWithRetry';
+import { useMediaPermissions } from '@/hooks/useMediaPermissions';
 
 interface StrandEditProps {
   strandId: string;
@@ -26,6 +27,7 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const { requestGalleryAccess, isChecking: checkingPermissions } = useMediaPermissions();
 
   useEffect(() => {
     fetchStrand();
@@ -142,7 +144,17 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
     cameraInputRef.current?.click();
   };
 
-  const handleGalleryClick = () => {
+  const handleGalleryClick = async () => {
+    // Check and request gallery permissions before opening file picker
+    setError('');
+    const permissionResult = await requestGalleryAccess();
+    
+    if (!permissionResult.success) {
+      setError(permissionResult.error || 'Unable to access gallery. Please check your browser permissions.');
+      return;
+    }
+    
+    // If permissions are granted or not needed, open the file picker
     galleryInputRef.current?.click();
   };
 
@@ -275,6 +287,7 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
         capture="environment"
       />
       {/* Gallery input - opens gallery/file picker (no capture attribute for Android compatibility) */}
+      {/* Using accept="image/*" for better cross-platform compatibility (iOS Safari and Android) */}
       <input
         ref={galleryInputRef}
         type="file"
@@ -337,7 +350,8 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
             <button
               type="button"
               onClick={handleGalleryClick}
-              className="bg-green-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200"
+              disabled={checkingPermissions}
+              className="bg-green-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg
                 className="w-12 h-12"
@@ -395,7 +409,8 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
               <button
                 type="button"
                 onClick={handleGalleryClick}
-                className="bg-gray-700 text-gray-100 py-3 px-4 rounded-lg font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[48px] active:scale-95 transition-all duration-200"
+                disabled={checkingPermissions}
+                className="bg-gray-700 text-gray-100 py-3 px-4 rounded-lg font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[48px] active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 🖼️ Choose Different
               </button>

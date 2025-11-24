@@ -202,23 +202,31 @@ export async function PUT(
       );
     }
 
-    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
     const strandId = params.id;
 
-    // Verify user owns the strand
-    const ownershipCheck = await query(
-      `SELECT id, content, image_id FROM strands WHERE id = $1 AND user_id = $2`,
-      [strandId, authUser.userId]
+    // Verify strand exists and user owns it (or is admin)
+    const strandCheck = await query(
+      `SELECT id, content, image_id, user_id FROM strands WHERE id = $1`,
+      [strandId]
     );
 
-    if (ownershipCheck.rows.length === 0) {
+    if (strandCheck.rows.length === 0) {
       return NextResponse.json(
-        { message: 'Strand not found or access denied' },
+        { message: 'Strand not found' },
         { status: 404 }
       );
     }
 
-    const existingStrand = ownershipCheck.rows[0];
+    const existingStrand = strandCheck.rows[0];
+    
+    // Check ownership (unless user is admin)
+    if (!authUser.isAdmin && existingStrand.user_id !== authUser.userId) {
+      return NextResponse.json(
+        { message: 'Access denied' },
+        { status: 403 }
+      );
+    }
 
     // Parse form data
     const formData = await request.formData();
@@ -368,17 +376,17 @@ export async function PUT(
       [trimmedContent, newImageId, strandId]
     );
 
-    const strand = updateResult.rows[0];
+    const updatedStrand = updateResult.rows[0];
 
     return NextResponse.json(
       {
-        id: strand.id,
-        userId: strand.user_id,
-        content: strand.content,
-        imageId: strand.image_id,
-        createdAt: strand.created_at,
-        updatedAt: strand.updated_at,
-        editedAt: strand.edited_at,
+        id: updatedStrand.id,
+        userId: updatedStrand.user_id,
+        content: updatedStrand.content,
+        imageId: updatedStrand.image_id,
+        createdAt: updatedStrand.created_at,
+        updatedAt: updatedStrand.updated_at,
+        editedAt: updatedStrand.edited_at,
       },
       { status: 200 }
     );
@@ -410,19 +418,29 @@ export async function DELETE(
       );
     }
 
-    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
+    const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
     const strandId = params.id;
 
-    // Verify user owns the strand
-    const ownershipCheck = await query(
-      `SELECT id FROM strands WHERE id = $1 AND user_id = $2`,
-      [strandId, authUser.userId]
+    // Verify strand exists
+    const strandCheck = await query(
+      `SELECT id, user_id FROM strands WHERE id = $1`,
+      [strandId]
     );
 
-    if (ownershipCheck.rows.length === 0) {
+    if (strandCheck.rows.length === 0) {
       return NextResponse.json(
-        { message: 'Strand not found or access denied' },
+        { message: 'Strand not found' },
         { status: 404 }
+      );
+    }
+
+    const strandToDelete = strandCheck.rows[0];
+    
+    // Check ownership (unless user is admin)
+    if (!authUser.isAdmin && strandToDelete.user_id !== authUser.userId) {
+      return NextResponse.json(
+        { message: 'Access denied' },
+        { status: 403 }
       );
     }
 

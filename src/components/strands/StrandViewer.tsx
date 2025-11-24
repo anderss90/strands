@@ -26,6 +26,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   const [submittingComment, setSubmittingComment] = useState(false);
   const [firing, setFiring] = useState(false);
   const [pinning, setPinning] = useState<string | null>(null); // Track which group is being pinned/unpinned
+  const [deletingComment, setDeletingComment] = useState<string | null>(null); // Track which comment is being deleted
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
@@ -162,6 +163,34 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Are you sure you want to delete this comment?')) {
+      return;
+    }
+
+    try {
+      setDeletingComment(commentId);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      const response = await fetch(`/api/strands/${strandId}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete comment');
+      }
+
+      // Remove comment from local state
+      setComments(prev => prev.filter(c => c.id !== commentId));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete comment');
+    } finally {
+      setDeletingComment(null);
+    }
+  };
+
   const handlePin = async (groupId: string) => {
     if (!strand) return;
 
@@ -243,6 +272,8 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   }
 
   const isOwner = user?.id === strand.userId;
+  const isAdmin = user?.isAdmin || user?.is_admin || false;
+  const canEditDelete = isOwner || isAdmin;
   const hasImage = !!strand.imageId && strand.image;
   const hasText = !!strand.content;
 
@@ -271,7 +302,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
         <div className="flex-1 text-white text-center font-medium">
           {strand.user?.displayName || 'Strand'}
         </div>
-        {isOwner && (
+        {canEditDelete && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
@@ -282,7 +313,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
                 }
               }}
               className="text-blue-500 p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-200 active:scale-95"
-              title="Edit strand"
+              title={isAdmin && !isOwner ? "Edit strand (Admin)" : "Edit strand"}
             >
               <svg
                 className="w-5 h-5"
@@ -302,6 +333,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
               onClick={handleDelete}
               disabled={deleting}
               className="text-red-500 p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50 transition-all duration-200 active:scale-95"
+              title={isAdmin && !isOwner ? "Delete strand (Admin)" : "Delete strand"}
             >
               {deleting ? (
                 <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
@@ -323,7 +355,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
             </button>
           </div>
         )}
-        {!isOwner && <div className="w-[44px]" />}
+        {!canEditDelete && <div className="w-[44px]" />}
       </div>
 
       {/* Scrollable Content Area */}
@@ -485,33 +517,69 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
             ) : comments.length === 0 ? (
               <p className="text-gray-400 text-sm text-center py-4">No comments yet</p>
             ) : (
-              comments.map((comment) => (
-                <div key={comment.id} className="flex gap-2 animate-fade-in">
-                  {comment.user.profilePictureUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={comment.user.profilePictureUrl}
-                      alt={comment.user.displayName}
-                      className="w-8 h-8 rounded-full flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-medium">
-                      {comment.user.displayName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="bg-white/10 rounded-lg p-2">
-                      <p className="font-medium text-xs mb-1">{comment.user.displayName}</p>
-                      <p className="text-sm break-words text-gray-300">
-                        <LinkText text={comment.content} />
+              comments.map((comment) => {
+                const isCommentOwner = user?.id === comment.userId;
+                const isCommentAdmin = user?.isAdmin || user?.is_admin || false;
+                const canDeleteComment = isCommentOwner || isCommentAdmin;
+                
+                return (
+                  <div key={comment.id} className="flex gap-2 animate-fade-in">
+                    {comment.user.profilePictureUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={comment.user.profilePictureUrl}
+                        alt={comment.user.displayName}
+                        className="w-8 h-8 rounded-full flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-medium">
+                        {comment.user.displayName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="bg-white/10 rounded-lg p-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-xs mb-1">{comment.user.displayName}</p>
+                            <p className="text-sm break-words text-gray-300">
+                              <LinkText text={comment.content} />
+                            </p>
+                          </div>
+                          {canDeleteComment && (
+                            <button
+                              onClick={() => handleDeleteComment(comment.id)}
+                              disabled={deletingComment === comment.id}
+                              className="text-red-400 hover:text-red-300 p-1 rounded transition-all duration-200 active:scale-95 disabled:opacity-50 flex-shrink-0"
+                              title={isCommentAdmin && !isCommentOwner ? "Delete comment (Admin)" : "Delete comment"}
+                            >
+                              {deletingComment === comment.id ? (
+                                <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-gray-400 text-xs mt-1 ml-2">
+                        {new Date(comment.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <p className="text-gray-400 text-xs mt-1 ml-2">
-                      {new Date(comment.createdAt).toLocaleDateString()}
-                    </p>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
