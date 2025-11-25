@@ -52,10 +52,16 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
     }
   };
 
+  const isTextOnly = hasText && !hasImage;
+
   return (
     <div
       onClick={onClick}
-      className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 overflow-hidden cursor-pointer hover:shadow-md active:scale-[0.98] transition-all duration-200"
+      className={`bg-gray-800 rounded-lg shadow-sm border overflow-hidden cursor-pointer hover:shadow-md active:scale-[0.98] transition-all duration-200 ${
+        isTextOnly 
+          ? 'border-blue-600/50 border-2 shadow-lg shadow-blue-900/20' 
+          : 'border-gray-700'
+      }`}
     >
       {hasImage && strand.image && (
         <div className="relative aspect-square bg-gray-700 overflow-hidden">
@@ -78,8 +84,15 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
       )}
       
       {hasText && (
-        <div className="p-4">
-          <p className="text-gray-100 text-sm line-clamp-3">
+        <div className={`relative ${isTextOnly ? 'p-6 min-h-[120px] flex items-center' : 'p-4'}`}>
+          {isTextOnly && (
+            <div className="absolute top-4 left-4 text-blue-400 opacity-50">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+          )}
+          <p className={`text-gray-100 ${isTextOnly ? 'text-base leading-relaxed pl-8' : 'text-sm line-clamp-3'}`}>
             <LinkText text={strand.content || ''} />
           </p>
         </div>
