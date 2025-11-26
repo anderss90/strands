@@ -50,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Feed now shows thumbnail image for videos (not video element)
   - Falls back to video element with frame extraction if thumbnail missing
   - Play button overlay and duration indicator remain visible on video thumbnails
+- **Moved user name above strand content in feed**
+  - User name and profile picture now appear above the strand content
+  - Footer now only contains fire button and edit indicator
+  - Improved visual hierarchy in strand cards
 
 ## [Previous Changes]
 

@@ -132,8 +132,31 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
         </div>
       )}
       
+      {/* User name above content */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-center gap-2">
+          {strand.user?.profilePictureUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={strand.user.profilePictureUrl}
+              alt={strand.user.displayName}
+              className="w-6 h-6 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-6 h-6 bg-blue-900 rounded-full flex items-center justify-center">
+              <span className="text-blue-400 text-xs font-medium">
+                {strand.user?.displayName?.charAt(0).toUpperCase() || '?'}
+              </span>
+            </div>
+          )}
+          <p className="text-gray-300 text-xs font-medium truncate">
+            {strand.user?.displayName || 'Unknown'}
+          </p>
+        </div>
+      </div>
+
       {hasText && (
-        <div className={`relative ${isTextOnly ? 'p-6 min-h-[120px] flex items-center' : 'p-4'}`}>
+        <div className={`relative ${isTextOnly ? 'p-6 min-h-[120px] flex items-center' : 'px-4 pb-4'}`}>
           {isTextOnly && (
             <div className="absolute top-4 left-4 text-blue-400 opacity-50">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,26 +171,7 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
       )}
 
       <div className="px-4 pb-4 pt-2 border-t border-gray-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {strand.user?.profilePictureUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={strand.user.profilePictureUrl}
-                alt={strand.user.displayName}
-                className="w-6 h-6 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-6 h-6 bg-blue-900 rounded-full flex items-center justify-center">
-                <span className="text-blue-400 text-xs font-medium">
-                  {strand.user?.displayName?.charAt(0).toUpperCase() || '?'}
-                </span>
-              </div>
-            )}
-            <p className="text-gray-300 text-xs font-medium truncate">
-              {strand.user?.displayName || 'Unknown'}
-            </p>
-          </div>
+        <div className="flex items-center justify-end">
           <div className="flex items-center gap-3">
             <button
               onClick={handleFireClick}
