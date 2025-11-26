@@ -18,7 +18,6 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
   const [localFireCount, setLocalFireCount] = useState(strand.fireCount || 0);
   const [localHasUserFired, setLocalHasUserFired] = useState(strand.hasUserFired || false);
   const [firing, setFiring] = useState(false);
-  const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Update local state when strand prop changes
@@ -27,55 +26,6 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
     setLocalHasUserFired(strand.hasUserFired || false);
   }, [strand.fireCount, strand.hasUserFired]);
 
-  // Extract video thumbnail if no thumbnail URL is available
-  useEffect(() => {
-    if (isVideo && strand.image && !strand.image.thumbnailUrl && !videoThumbnail && videoRef.current) {
-      const video = videoRef.current;
-      
-      const extractThumbnail = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = video.videoWidth || 640;
-          canvas.height = video.videoHeight || 360;
-          const ctx = canvas.getContext('2d');
-          
-          if (ctx && video.videoWidth > 0 && video.videoHeight > 0) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const thumbnail = canvas.toDataURL('image/jpeg', 0.8);
-            setVideoThumbnail(thumbnail);
-          }
-        } catch (error) {
-          console.error('Error extracting video thumbnail:', error);
-        }
-      };
-
-      const handleLoadedData = () => {
-        if (video.duration) {
-          // Seek to 0.1 seconds to get a frame
-          video.currentTime = Math.min(0.1, video.duration / 10);
-        }
-      };
-
-      const handleSeeked = () => {
-        extractThumbnail();
-        video.removeEventListener('loadeddata', handleLoadedData);
-        video.removeEventListener('seeked', handleSeeked);
-      };
-
-      video.addEventListener('loadeddata', handleLoadedData);
-      video.addEventListener('seeked', handleSeeked);
-
-      // If video is already loaded, try to extract immediately
-      if (video.readyState >= 2) {
-        handleLoadedData();
-      }
-
-      return () => {
-        video.removeEventListener('loadeddata', handleLoadedData);
-        video.removeEventListener('seeked', handleSeeked);
-      };
-    }
-  }, [isVideo, strand.image, videoThumbnail]);
 
   const handleFireClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -119,31 +69,26 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
       {hasImage && strand.image && (
         <div className="relative aspect-square bg-gray-700 overflow-hidden">
           {isVideo ? (
-            <>
-              {/* Show extracted thumbnail or poster if available */}
-              {(videoThumbnail || strand.image.thumbnailUrl) ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={videoThumbnail || strand.image.thumbnailUrl || ''}
-                  alt="Video thumbnail"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                  <div className="text-gray-500 text-xs">Loading thumbnail...</div>
-                </div>
-              )}
-              {/* Hidden video element for thumbnail extraction */}
-              <video
-                ref={videoRef}
-                src={strand.image.mediaUrl || strand.image.imageUrl || ''}
-                className="hidden"
-                preload="metadata"
-                playsInline
-                muted
-              />
-            </>
+            <video
+              ref={videoRef}
+              src={strand.image.mediaUrl || strand.image.imageUrl || ''}
+              poster={strand.image.thumbnailUrl || undefined}
+              className="w-full h-full object-cover"
+              preload="metadata"
+              playsInline
+              muted
+              onLoadedMetadata={(e) => {
+                // Seek to first frame to show as thumbnail
+                const video = e.currentTarget;
+                if (video.duration && !strand.image?.thumbnailUrl) {
+                  video.currentTime = Math.min(0.1, video.duration / 10);
+                }
+              }}
+              onSeeked={(e) => {
+                // Pause after seeking to show the frame
+                e.currentTarget.pause();
+              }}
+            />
           ) : (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img

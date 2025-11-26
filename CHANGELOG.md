@@ -43,12 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - "Choose from Gallery" button remains unchanged
   - Updated UI to show three buttons in a grid layout (photo, video, gallery)
 - **Fixed video thumbnail display in strands feed**
-  - Videos now extract thumbnail frames using canvas API
-  - Hidden video element loads video and seeks to first frame (0.1s)
-  - Canvas extracts frame and converts to image for display
-  - Falls back to thumbnailUrl if available from database
-  - Shows loading state while thumbnail is being extracted
+  - Videos now display directly using video element (not hidden)
+  - Video element uses `preload="metadata"` and seeks to 0.1s on load
+  - Automatically pauses after seeking to show first frame as thumbnail
+  - Uses `poster` attribute if thumbnailUrl is available from database
   - Play button overlay and duration indicator remain visible on video thumbnails
+  - Simplified approach avoids CORS issues with canvas extraction
 
 ## [Previous Changes]
 
