@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changelog component that displays recent changes grouped by date
 - "Changelog" button in the Console component header for easy access
 - "Back" button in Changelog component header for easy navigation back to Console
+- Date formatting utility functions for European 24-hour format (`src/lib/utils/dateFormat.ts`)
 
 ### Fixed
 - Camera input now explicitly accepts both images and videos (`accept="image/*,video/*"`) to allow mode switching in mobile camera apps
@@ -20,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Updated camera input in StrandCreate component to use explicit accept attribute for better mobile browser compatibility
+- **All timestamps now display in European 24-hour format (DD/MM/YYYY HH:mm)**
+  - Updated Changelog component to use European date/time format
+  - Updated Console component to use 24-hour time format
+  - Updated StrandViewer component to use European date/time format
+  - Updated ImageViewer component to use European date/time format
+  - Updated ShareGroupModal component to use European date/time format
 
 ## [Previous Changes]
 

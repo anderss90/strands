@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatTime } from '@/lib/utils/dateFormat';
 
 interface ConsoleMessage {
   id: string;
@@ -175,7 +176,7 @@ export default function Console() {
             >
               <div className="flex items-start gap-2">
                 <span className="text-xs text-gray-500 min-w-[60px]">
-                  {msg.timestamp.toLocaleTimeString()}
+                  {formatTime(msg.timestamp)}
                 </span>
                 <span className="text-xs font-semibold min-w-[50px] uppercase">
                   {msg.type}:

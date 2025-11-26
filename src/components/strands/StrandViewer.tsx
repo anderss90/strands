@@ -9,6 +9,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import LinkText from '@/components/common/LinkText';
 import VideoPlayer from '@/components/media/VideoPlayer';
 import { strandApi } from '@/lib/api';
+import { formatDateTime } from '@/lib/utils/dateFormat';
 
 interface StrandViewerProps {
   strandId: string;
@@ -511,7 +512,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
                 <div>
                   <p className="font-medium">@{strand.user.username}</p>
                   <p className="text-gray-400 text-xs">
-                    {new Date(strand.createdAt).toLocaleDateString()}
+                    {formatDateTime(strand.createdAt)}
                   </p>
                 </div>
               </div>
@@ -585,7 +586,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
                         </div>
                       </div>
                       <p className="text-gray-400 text-xs mt-1 ml-2">
-                        {new Date(comment.createdAt).toLocaleDateString()}
+                        {formatDateTime(comment.createdAt)}
                       </p>
                     </div>
                   </div>

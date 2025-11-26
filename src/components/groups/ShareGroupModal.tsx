@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { groupApi } from '@/lib/api';
+import { formatDateTime } from '@/lib/utils/dateFormat';
 
 interface ShareGroupModalProps {
   groupId: string;
@@ -120,7 +121,7 @@ export default function ShareGroupModal({ groupId, onClose }: ShareGroupModalPro
 
             {expiresAt && (
               <p className="text-xs text-gray-400 text-center">
-                Expires: {new Date(expiresAt).toLocaleDateString()}
+                Expires: {formatDateTime(expiresAt)}
               </p>
             )}
 

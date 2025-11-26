@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatDateTimeLong, formatDateLong } from '@/lib/utils/dateFormat';
 
 interface ChangelogEntry {
   hash: string;
@@ -46,14 +47,7 @@ export default function Changelog() {
 
   const formatDate = (dateString: string) => {
     try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      return formatDateTimeLong(dateString);
     } catch {
       return dateString;
     }
@@ -65,11 +59,7 @@ export default function Changelog() {
     entries.forEach(entry => {
       try {
         const date = new Date(entry.date);
-        const dateKey = date.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        });
+        const dateKey = formatDateLong(entry.date);
         
         if (!grouped[dateKey]) {
           grouped[dateKey] = [];

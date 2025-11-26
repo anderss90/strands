@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { imageApi, Image, Comment } from '@/lib/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { formatDateTime } from '@/lib/utils/dateFormat';
 
 interface ImageViewerProps {
   imageId: string;
@@ -288,7 +289,7 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
                 <div>
                   <p className="font-medium">@{image.user.username}</p>
                   <p className="text-gray-400 text-xs">
-                    {new Date(image.createdAt).toLocaleDateString()}
+                    {formatDateTime(image.createdAt)}
                   </p>
                 </div>
               </div>
@@ -360,7 +361,7 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
                         </div>
                       </div>
                       <p className="text-gray-400 text-xs mt-1 ml-2">
-                        {new Date(comment.createdAt).toLocaleDateString()}
+                        {formatDateTime(comment.createdAt)}
                       </p>
                     </div>
                   </div>
