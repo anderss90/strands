@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Camera input now explicitly accepts both images and videos (`accept="image/*,video/*"`) to allow mode switching in mobile camera apps
 - Previously, the camera would default to photo-only mode on some mobile devices
+- **Swapped button handlers on Android to match actual behavior**
+  - "Take Photo/Video" button now uses gallery input (gives choice between camera/video/gallery on Android)
+  - "Choose from Gallery" button now uses camera input (opens gallery directly on Android)
+  - Buttons now match their actual behavior on Android devices
 
 ### Changed
 - Updated camera input in StrandCreate component to use explicit accept attribute for better mobile browser compatibility

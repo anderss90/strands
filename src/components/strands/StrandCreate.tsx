@@ -331,11 +331,8 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     }
   };
 
-  const handleCameraClick = () => {
-    cameraInputRef.current?.click();
-  };
-
-  const handleGalleryClick = async () => {
+  const handleCameraClick = async () => {
+    // On Android, the gallery input (without capture) gives choice between camera/video/gallery
     // Check and request gallery permissions before opening file picker
     setError('');
     const permissionResult = await requestGalleryAccess();
@@ -347,6 +344,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     
     // If permissions are granted or not needed, open the file picker
     galleryInputRef.current?.click();
+  };
+
+  const handleGalleryClick = () => {
+    // On Android, the camera input (with capture) opens the gallery directly
+    cameraInputRef.current?.click();
   };
 
   const toggleGroup = (groupId: string) => {
@@ -668,7 +670,8 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
             <button
               type="button"
               onClick={handleCameraClick}
-              className="bg-blue-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200"
+              disabled={checkingPermissions}
+              className="bg-blue-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg
                 className="w-12 h-12"
@@ -694,8 +697,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
             <button
               type="button"
               onClick={handleGalleryClick}
-              disabled={checkingPermissions}
-              className="bg-green-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-green-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200"
             >
               <svg
                 className="w-12 h-12"
