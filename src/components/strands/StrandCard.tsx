@@ -86,6 +86,47 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
           : 'border-gray-700'
       }`}
     >
+      {/* First row: User name + Fire button */}
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {strand.user?.profilePictureUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={strand.user.profilePictureUrl}
+                alt={strand.user.displayName}
+                className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-6 h-6 bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-blue-400 text-xs font-medium">
+                  {strand.user?.displayName?.charAt(0).toUpperCase() || '?'}
+                </span>
+              </div>
+            )}
+            <p className="text-gray-300 text-xs font-medium truncate">
+              {strand.user?.displayName || 'Unknown'}
+            </p>
+          </div>
+          <button
+            onClick={handleFireClick}
+            disabled={firing}
+            className={`flex items-center gap-1 px-2 py-1 rounded transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ${
+              localHasUserFired
+                ? 'bg-orange-600/20 text-orange-400 hover:bg-orange-600/30'
+                : 'text-gray-400 hover:bg-gray-700/50'
+            }`}
+            title={localHasUserFired ? 'Remove fire' : 'Add fire'}
+          >
+            <span className="text-sm">🔥</span>
+            {localFireCount > 0 && (
+              <span className="text-xs font-medium">{localFireCount}</span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Second: Strand image/video */}
       {hasImage && strand.image && (
         <div className="relative aspect-square bg-gray-700 overflow-hidden">
           {isVideo ? (
@@ -151,32 +192,10 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
           )}
         </div>
       )}
-      
-      {/* User name above content */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="flex items-center gap-2">
-          {strand.user?.profilePictureUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={strand.user.profilePictureUrl}
-              alt={strand.user.displayName}
-              className="w-6 h-6 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-6 h-6 bg-blue-900 rounded-full flex items-center justify-center">
-              <span className="text-blue-400 text-xs font-medium">
-                {strand.user?.displayName?.charAt(0).toUpperCase() || '?'}
-              </span>
-            </div>
-          )}
-          <p className="text-gray-300 text-xs font-medium truncate">
-            {strand.user?.displayName || 'Unknown'}
-          </p>
-        </div>
-      </div>
 
+      {/* Third: Strand text content */}
       {hasText && (
-        <div className={`relative ${isTextOnly ? 'p-6 min-h-[120px] flex items-center' : 'px-4 pb-4'}`}>
+        <div className={`relative ${isTextOnly ? 'p-6 min-h-[120px] flex items-center' : 'px-4 pb-4 pt-4'}`}>
           {isTextOnly && (
             <div className="absolute top-4 left-4 text-blue-400 opacity-50">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,30 +256,14 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
         </div>
       )}
 
-      <div className="px-4 pb-4 pt-2 border-t border-gray-700">
-        <div className="flex items-center justify-end">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleFireClick}
-              disabled={firing}
-              className={`flex items-center gap-1 px-2 py-1 rounded transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
-                localHasUserFired
-                  ? 'bg-orange-600/20 text-orange-400 hover:bg-orange-600/30'
-                  : 'text-gray-400 hover:bg-gray-700/50'
-              }`}
-              title={localHasUserFired ? 'Remove fire' : 'Add fire'}
-            >
-              <span className="text-sm">🔥</span>
-              {localFireCount > 0 && (
-                <span className="text-xs font-medium">{localFireCount}</span>
-              )}
-            </button>
-            {strand.editedAt && (
-              <span className="text-gray-500 text-xs">Edited</span>
-            )}
+      {/* Footer with edit indicator */}
+      {strand.editedAt && (
+        <div className="px-4 pb-4 pt-2 border-t border-gray-700">
+          <div className="flex items-center justify-end">
+            <span className="text-gray-500 text-xs">Edited</span>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

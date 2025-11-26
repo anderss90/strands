@@ -60,6 +60,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Displays comment text with link support
   - Clear indicator when there are more than 3 comments ("View X more comments")
   - Clicking "View more comments" opens the full strand view
+- **Reorganized strand card layout**
+  - First row: Username and fire emoji button side by side
+  - Second row: Strand image/video
+  - Third row: Strand text content
+  - Comments appear below content
+  - Edit indicator moved to footer (only shown if strand was edited)
 
 ## [Previous Changes]
 
