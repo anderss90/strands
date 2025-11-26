@@ -599,11 +599,12 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Hidden file inputs */}
-      {/* Camera input - opens camera on mobile */}
+      {/* Camera input - opens camera on mobile for both photos and videos */}
+      {/* Removed accept filter to allow native camera app to show photo/video mode selector */}
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept=""
         onChange={handleFileChange}
         className="hidden"
         capture="environment"
@@ -688,7 +689,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                   d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              <span className="text-sm font-medium">Take Photo</span>
+              <span className="text-sm font-medium">Take Photo/Video</span>
             </button>
             <button
               type="button"
@@ -765,7 +766,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                 onClick={handleCameraClick}
                 className="bg-gray-700 text-gray-100 py-3 px-4 rounded-lg font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[48px] active:scale-95 transition-all duration-200"
               >
-                📷 Take New
+                📷📹 Take New
               </button>
               <button
                 type="button"
