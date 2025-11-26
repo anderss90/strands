@@ -609,11 +609,12 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         capture="environment"
       />
       {/* Gallery input - opens gallery/file picker (no capture attribute for Android compatibility) */}
-      {/* Using accept="image/*,video/*" for better cross-platform compatibility (iOS Safari and Android) */}
+      {/* Note: Some mobile browsers may only show images with image/*,video/* 
+          If videos don't appear, try removing the accept attribute or using accept="" */}
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept=""
         onChange={handleFileChange}
         className="hidden"
       />
