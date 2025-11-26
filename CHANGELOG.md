@@ -66,6 +66,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Third row: Strand text content
   - Comments appear below content
   - Edit indicator moved to footer (only shown if strand was edited)
+- **Added comment notifications for strand authors and commenters**
+  - Strand authors receive notifications when someone comments on their strand
+  - Users who have previously commented on a strand receive notifications for new comments
+  - Notifications include commenter name and link to the strand
+  - Prevents duplicate notifications by excluding already-notified users from group notifications
+  - Added `notifyUsers` function to send notifications to specific user IDs
 
 ## [Previous Changes]
 

@@ -112,3 +112,98 @@ export async function notifyGroupMembers(
   }
 }
 
+/**
+ * Send push notifications to specific users by their user IDs
+ */
+export async function notifyUsers(
+  userIds: string | string[],
+  notification: {
+    title: string;
+    body: string;
+    data?: any;
+    tag?: string;
+  }
+): Promise<void> {
+  try {
+    // Check if VAPID keys are configured
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      console.warn('VAPID keys not configured. Push notifications disabled.');
+      return;
+    }
+
+    // Normalize userIds to array
+    const userIdsArray = Array.isArray(userIds) ? userIds : [userIds];
+
+    if (userIdsArray.length === 0) {
+      return; // No users to notify
+    }
+
+    // Get all push subscriptions for the specified users
+    const subscriptionsResult = await query(
+      `SELECT endpoint, p256dh_key, auth_key, user_id
+       FROM push_subscriptions
+       WHERE user_id = ANY($1::uuid[])`,
+      [userIdsArray]
+    );
+
+    if (subscriptionsResult.rows.length === 0) {
+      return; // No subscriptions to notify
+    }
+
+    const subscriptions: (PushSubscription & { userId: string })[] = subscriptionsResult.rows.map(row => ({
+      endpoint: row.endpoint,
+      p256dh_key: row.p256dh_key,
+      auth_key: row.auth_key,
+      userId: row.user_id,
+    }));
+
+    // Prepare notification payload
+    const payload = JSON.stringify({
+      title: notification.title,
+      body: notification.body,
+      icon: '/icon-192x192.png',
+      badge: '/icon-192x192.png',
+      tag: notification.tag || 'strands-notification',
+      data: notification.data || {},
+    });
+
+    // Send notifications to all subscriptions
+    const sendPromises = subscriptions.map(async (subscription) => {
+      try {
+        const pushSubscription = {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: subscription.p256dh_key,
+            auth: subscription.auth_key,
+          },
+        };
+
+        await webpush.sendNotification(pushSubscription, payload);
+        console.log(`Push notification sent successfully to user ${subscription.userId}`);
+      } catch (error: any) {
+        // Handle specific error cases
+        if (error.statusCode === 410 || error.statusCode === 404) {
+          // Subscription expired or invalid - remove it from database
+          console.log(`Removing expired subscription for user ${subscription.userId}`);
+          await query(
+            `DELETE FROM push_subscriptions WHERE endpoint = $1 AND user_id = $2`,
+            [subscription.endpoint, subscription.userId]
+          );
+        } else if (error.statusCode === 429) {
+          // Rate limit exceeded - log but don't remove subscription
+          console.warn(`Rate limit exceeded for user ${subscription.userId}`);
+        } else {
+          // Other errors - log but continue
+          console.error(`Error sending push notification to user ${subscription.userId}:`, error.message);
+        }
+      }
+    });
+
+    // Wait for all notifications to be sent (or fail)
+    await Promise.allSettled(sendPromises);
+  } catch (error) {
+    console.error('Error sending push notifications:', error);
+    // Don't throw - notification failure shouldn't break the main operation
+  }
+}
+

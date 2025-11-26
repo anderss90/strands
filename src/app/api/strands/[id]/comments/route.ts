@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/middleware';
 import { query } from '@/lib/db';
-import { notifyGroupMembers } from '@/lib/notifications';
+import { notifyGroupMembers, notifyUsers } from '@/lib/notifications';
 
 // GET /api/strands/[id]/comments - Get comments for a strand
 export async function GET(
@@ -202,11 +202,55 @@ export async function POST(
 
     if (strandResult.rows.length > 0) {
       const strand = strandResult.rows[0];
+      const strandAuthorId = strand.strand_user_id;
       const groupIds = strand.group_ids || [];
 
+      // Get all users who have commented on this strand (excluding the current comment author)
+      const previousCommentersResult = await query(
+        `SELECT DISTINCT user_id
+         FROM strand_comments
+         WHERE strand_id = $1 AND user_id != $2`,
+        [strandId, authUser.userId]
+      );
+
+      const previousCommenterIds = previousCommentersResult.rows.map(row => row.user_id);
+
+      // Collect all users to notify (strand author + previous commenters, excluding comment author)
+      const usersToNotify: string[] = [];
+      
+      // Add strand author if not the comment author
+      if (strandAuthorId !== authUser.userId) {
+        usersToNotify.push(strandAuthorId);
+      }
+
+      // Add previous commenters (excluding comment author and strand author to avoid duplicates)
+      previousCommenterIds.forEach(commenterId => {
+        if (commenterId !== authUser.userId && commenterId !== strandAuthorId && !usersToNotify.includes(commenterId)) {
+          usersToNotify.push(commenterId);
+        }
+      });
+
+      // Send notifications to strand author and previous commenters
+      if (usersToNotify.length > 0) {
+        await notifyUsers(
+          usersToNotify,
+          {
+            title: 'New comment on your strand',
+            body: `${user.display_name} commented on a strand you ${strandAuthorId === authUser.userId ? 'created' : 'commented on'}`,
+            tag: `strand-comment-${strandId}`,
+            data: {
+              type: 'comment',
+              strandId: strandId,
+              commentId: comment.id,
+              url: `/strands/${strandId}`,
+            },
+          }
+        );
+      }
+
       // Send notifications to all groups where this strand is shared
-      // (excluding the comment author and strand author)
-      const excludeUserIds = [authUser.userId, strand.strand_user_id];
+      // (excluding the comment author, strand author, and previous commenters to avoid duplicates)
+      const excludeUserIds = [authUser.userId, ...usersToNotify];
       
       for (const groupId of groupIds) {
         // Get group name
@@ -216,7 +260,7 @@ export async function POST(
         );
         const groupName = groupResult.rows[0]?.name || 'a group';
 
-        // Send notification to all group members except comment author and strand author
+        // Send notification to all group members except those already notified
         await notifyGroupMembers(
           groupId,
           excludeUserIds,
