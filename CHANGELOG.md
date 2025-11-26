@@ -54,6 +54,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - User name and profile picture now appear above the strand content
   - Footer now only contains fire button and edit indicator
   - Improved visual hierarchy in strand cards
+- **Added comments preview to strand feed**
+  - First three comments are now displayed under strand content
+  - Shows commenter profile picture and name
+  - Displays comment text with link support
+  - Clear indicator when there are more than 3 comments ("View X more comments")
+  - Clicking "View more comments" opens the full strand view
 
 ## [Previous Changes]
 

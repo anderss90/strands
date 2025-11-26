@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Strand } from '@/types/strand';
+import { Strand, Comment } from '@/types/strand';
 import LinkText from '@/components/common/LinkText';
 import { strandApi } from '@/lib/api';
 
@@ -18,6 +18,8 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
   const [localFireCount, setLocalFireCount] = useState(strand.fireCount || 0);
   const [localHasUserFired, setLocalHasUserFired] = useState(strand.hasUserFired || false);
   const [firing, setFiring] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Update local state when strand prop changes
@@ -25,6 +27,24 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
     setLocalFireCount(strand.fireCount || 0);
     setLocalHasUserFired(strand.hasUserFired || false);
   }, [strand.fireCount, strand.hasUserFired]);
+
+  // Fetch comments for the strand
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        setLoadingComments(true);
+        const response = await strandApi.getStrandComments(strand.id);
+        setComments(response.comments || []);
+      } catch (error) {
+        console.error('Failed to fetch comments:', error);
+        setComments([]);
+      } finally {
+        setLoadingComments(false);
+      }
+    };
+
+    fetchComments();
+  }, [strand.id]);
 
 
   const handleFireClick = async (e: React.MouseEvent) => {
@@ -167,6 +187,53 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
           <p className={`text-gray-100 ${isTextOnly ? 'text-base leading-relaxed pl-8' : 'text-sm line-clamp-3'}`}>
             <LinkText text={strand.content || ''} />
           </p>
+        </div>
+      )}
+
+      {/* Comments section */}
+      {comments.length > 0 && (
+        <div className="px-4 pb-3 border-t border-gray-700">
+          <div className="pt-3 space-y-2">
+            {comments.slice(0, 3).map((comment) => (
+              <div key={comment.id} className="flex items-start gap-2">
+                {comment.user?.profilePictureUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={comment.user.profilePictureUrl}
+                    alt={comment.user.displayName}
+                    className="w-5 h-5 rounded-full object-cover flex-shrink-0 mt-0.5"
+                  />
+                ) : (
+                  <div className="w-5 h-5 bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-blue-400 text-[10px] font-medium">
+                      {comment.user?.displayName?.charAt(0).toUpperCase() || '?'}
+                    </span>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-gray-300 text-xs font-medium">
+                      {comment.user?.displayName || 'Unknown'}
+                    </span>
+                  </div>
+                  <p className="text-gray-400 text-xs mt-0.5 break-words">
+                    <LinkText text={comment.content} />
+                  </p>
+                </div>
+              </div>
+            ))}
+            {comments.length > 3 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick?.();
+                }}
+                className="text-gray-400 hover:text-gray-300 text-xs font-medium mt-1 transition-colors"
+              >
+                View {comments.length - 3} more {comments.length - 3 === 1 ? 'comment' : 'comments'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
