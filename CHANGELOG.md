@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - "Changelog" button in the Console component header for easy access
 - "Back" button in Changelog component header for easy navigation back to Console
 - Date formatting utility functions for European 24-hour format (`src/lib/utils/dateFormat.ts`)
+- Comprehensive documentation on mobile camera and gallery access (`MOBILE_CAMERA_GALLERY_ACCESS.md`)
+  - HTML5 file input method with accept and capture attributes
+  - MediaDevices API (getUserMedia) method
+  - iOS vs Android platform differences
+  - Differences between image, video, and both media types
+  - Best practices, common issues, and solutions
 
 ### Fixed
 - Camera input now explicitly accepts both images and videos (`accept="image/*,video/*"`) to allow mode switching in mobile camera apps
