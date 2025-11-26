@@ -37,6 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated StrandViewer component to use European date/time format
   - Updated ImageViewer component to use European date/time format
   - Updated ShareGroupModal component to use European date/time format
+- **Split camera button into separate photo and video buttons**
+  - "Take Photo" button opens camera in photo mode (`accept="image/*"` with `capture="environment"`)
+  - "Record Video" button opens camera in video mode (`accept="video/*"` with `capture="environment"`)
+  - "Choose from Gallery" button remains unchanged
+  - Updated UI to show three buttons in a grid layout (photo, video, gallery)
 
 ## [Previous Changes]
 

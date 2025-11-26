@@ -31,7 +31,8 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isVideo, setIsVideo] = useState(false);
   const [videoMetadata, setVideoMetadata] = useState<{ duration?: number; width?: number; height?: number } | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const photoCameraInputRef = useRef<HTMLInputElement>(null);
+  const videoCameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { requestGalleryAccess, isChecking: checkingPermissions } = useMediaPermissions();
@@ -320,8 +321,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
       setFile(null);
       setFileData(null);
       setPreview(null);
-      if (cameraInputRef.current) {
-        cameraInputRef.current.value = '';
+      if (photoCameraInputRef.current) {
+        photoCameraInputRef.current.value = '';
+      }
+      if (videoCameraInputRef.current) {
+        videoCameraInputRef.current.value = '';
       }
       if (galleryInputRef.current) {
         galleryInputRef.current.value = '';
@@ -331,8 +335,17 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     }
   };
 
-  const handleCameraClick = async () => {
-    // On Android, the gallery input (without capture) gives choice between camera/video/gallery
+  const handlePhotoCameraClick = () => {
+    // Open camera in photo mode
+    photoCameraInputRef.current?.click();
+  };
+
+  const handleVideoCameraClick = () => {
+    // Open camera in video mode
+    videoCameraInputRef.current?.click();
+  };
+
+  const handleGalleryClick = async () => {
     // Check and request gallery permissions before opening file picker
     setError('');
     const permissionResult = await requestGalleryAccess();
@@ -344,11 +357,6 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     
     // If permissions are granted or not needed, open the file picker
     galleryInputRef.current?.click();
-  };
-
-  const handleGalleryClick = () => {
-    // On Android, the camera input (with capture) opens the gallery directly
-    cameraInputRef.current?.click();
   };
 
   const toggleGroup = (groupId: string) => {
@@ -571,8 +579,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         URL.revokeObjectURL(preview);
       }
       
-      if (cameraInputRef.current) {
-        cameraInputRef.current.value = '';
+      if (photoCameraInputRef.current) {
+        photoCameraInputRef.current.value = '';
+      }
+      if (videoCameraInputRef.current) {
+        videoCameraInputRef.current.value = '';
       }
       if (galleryInputRef.current) {
         galleryInputRef.current.value = '';
@@ -601,19 +612,25 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Hidden file inputs */}
-      {/* Camera input - opens camera on mobile for both photos and videos */}
-      {/* Explicitly accept both images and videos to allow mode switching in camera app */}
+      {/* Photo camera input - opens camera in photo mode */}
       <input
-        ref={cameraInputRef}
+        ref={photoCameraInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*"
         onChange={handleFileChange}
         className="hidden"
         capture="environment"
       />
-      {/* Gallery input - opens gallery/file picker (no capture attribute for Android compatibility) */}
-      {/* Note: Some mobile browsers may only show images with image/*,video/* 
-          If videos don't appear, try removing the accept attribute or using accept="" */}
+      {/* Video camera input - opens camera in video mode */}
+      <input
+        ref={videoCameraInputRef}
+        type="file"
+        accept="video/*"
+        onChange={handleFileChange}
+        className="hidden"
+        capture="environment"
+      />
+      {/* Gallery input - opens gallery/file picker */}
       <input
         ref={galleryInputRef}
         type="file"
@@ -666,12 +683,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
           </div>
         )}
         {!preview ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               type="button"
-              onClick={handleCameraClick}
-              disabled={checkingPermissions}
-              className="bg-blue-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handlePhotoCameraClick}
+              className="bg-blue-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200"
             >
               <svg
                 className="w-12 h-12"
@@ -692,12 +708,33 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                   d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              <span className="text-sm font-medium">Take Photo/Video</span>
+              <span className="text-sm font-medium">Take Photo</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleVideoCameraClick}
+              className="bg-purple-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200"
+            >
+              <svg
+                className="w-12 h-12"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+              <span className="text-sm font-medium">Record Video</span>
             </button>
             <button
               type="button"
               onClick={handleGalleryClick}
-              className="bg-green-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200"
+              disabled={checkingPermissions}
+              className="bg-green-600 text-white py-8 px-4 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-base min-h-[120px] flex flex-col items-center justify-center space-y-2 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg
                 className="w-12 h-12"
@@ -738,8 +775,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                 onClick={() => {
                   setFile(null);
                   setPreview(null);
-                  if (cameraInputRef.current) {
-                    cameraInputRef.current.value = '';
+                  if (photoCameraInputRef.current) {
+                    photoCameraInputRef.current.value = '';
+                  }
+                  if (videoCameraInputRef.current) {
+                    videoCameraInputRef.current.value = '';
                   }
                   if (galleryInputRef.current) {
                     galleryInputRef.current.value = '';
@@ -765,10 +805,10 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={handleCameraClick}
+                onClick={handlePhotoCameraClick}
                 className="bg-gray-700 text-gray-100 py-3 px-4 rounded-lg font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[48px] active:scale-95 transition-all duration-200"
               >
-                📷📹 Take New
+                📷 Take New
               </button>
               <button
                 type="button"
