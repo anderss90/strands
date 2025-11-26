@@ -66,15 +66,34 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
     >
       {hasImage && strand.image && (
         <div className="relative aspect-square bg-gray-700 overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={strand.image.thumbnailUrl || strand.image.imageUrl || strand.image.mediaUrl || ''}
-            alt={strand.image.fileName || (isVideo ? 'Strand video' : 'Strand image')}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
+          {isVideo ? (
+            <video
+              src={strand.image.mediaUrl || strand.image.imageUrl || ''}
+              poster={strand.image.thumbnailUrl || undefined}
+              className="w-full h-full object-cover"
+              preload="metadata"
+              playsInline
+              muted
+              onLoadedMetadata={(e) => {
+                // Seek to first frame to show as thumbnail if no poster
+                const video = e.currentTarget;
+                const image = strand.image;
+                if (image && !image.thumbnailUrl && video.duration) {
+                  video.currentTime = 0.1;
+                }
+              }}
+            />
+          ) : (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={strand.image.thumbnailUrl || strand.image.imageUrl || strand.image.mediaUrl || ''}
+              alt={strand.image.fileName || 'Strand image'}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          )}
           {isVideo && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
               <div className="bg-black/60 rounded-full p-3">
                 <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />

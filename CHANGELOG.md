@@ -42,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - "Record Video" button opens camera in video mode (`accept="video/*"` with `capture="environment"`)
   - "Choose from Gallery" button remains unchanged
   - Updated UI to show three buttons in a grid layout (photo, video, gallery)
+- **Fixed video thumbnail display in strands feed**
+  - Videos now use `<video>` element instead of `<img>` tag to properly display thumbnails
+  - Video element uses `preload="metadata"` to show first frame as thumbnail
+  - If thumbnail URL is available, it's used as poster image
+  - Play button overlay and duration indicator remain visible on video thumbnails
 
 ## [Previous Changes]
 
