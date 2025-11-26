@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changelog API endpoint (`/api/changelog`) that fetches git commit history
 - Changelog component that displays recent changes grouped by date
 - "Changelog" button in the Console component header for easy access
+- "Back" button in Changelog component header for easy navigation back to Console
 
 ### Fixed
 - Camera input now explicitly accepts both images and videos (`accept="image/*,video/*"`) to allow mode switching in mobile camera apps

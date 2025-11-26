@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface ChangelogEntry {
   hash: string;
@@ -18,6 +19,7 @@ export default function Changelog() {
   const [entries, setEntries] = useState<ChangelogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchChangelog = async () => {
@@ -106,7 +108,16 @@ export default function Changelog() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 p-4">
-        <h2 className="text-lg font-semibold text-gray-100">Changelog</h2>
+        <div className="flex items-center gap-3 mb-2">
+          <button
+            onClick={() => router.push('/console')}
+            className="text-gray-400 hover:text-gray-200 transition-colors"
+            aria-label="Back to Console"
+          >
+            ← Back
+          </button>
+          <h2 className="text-lg font-semibold text-gray-100">Changelog</h2>
+        </div>
         <p className="text-sm text-gray-400 mt-1">
           Recent changes and updates to the application
         </p>
