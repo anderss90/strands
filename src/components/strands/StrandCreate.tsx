@@ -600,11 +600,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Hidden file inputs */}
       {/* Camera input - opens camera on mobile for both photos and videos */}
-      {/* Removed accept filter to allow native camera app to show photo/video mode selector */}
+      {/* Explicitly accept both images and videos to allow mode switching in camera app */}
       <input
         ref={cameraInputRef}
         type="file"
-        accept=""
+        accept="image/*,video/*"
         onChange={handleFileChange}
         className="hidden"
         capture="environment"

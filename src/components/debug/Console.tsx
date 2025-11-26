@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface ConsoleMessage {
   id: string;
@@ -17,6 +18,7 @@ export default function Console() {
   const [autoScroll, setAutoScroll] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageIdRef = useRef(0);
+  const router = useRouter();
 
   // Load messages from localStorage on mount
   useEffect(() => {
@@ -135,6 +137,12 @@ export default function Console() {
       <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-100">Console</h2>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push('/console/changelog')}
+            className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors min-h-[32px]"
+          >
+            Changelog
+          </button>
           <label className="flex items-center gap-2 text-sm text-gray-400">
             <input
               type="checkbox"
