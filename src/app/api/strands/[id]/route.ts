@@ -47,10 +47,15 @@ export async function GET(
           u.display_name,
           u.profile_picture_url,
           i.image_url,
+          i.media_url,
           i.thumbnail_url,
           i.file_name,
           i.file_size,
           i.mime_type,
+          i.media_type,
+          i.duration,
+          i.width,
+          i.height,
           COALESCE(
             (
               SELECT COUNT(*)::int
@@ -101,10 +106,15 @@ export async function GET(
           u.display_name,
           u.profile_picture_url,
           i.image_url,
+          i.media_url,
           i.thumbnail_url,
           i.file_name,
           i.file_size,
           i.mime_type,
+          i.media_type,
+          i.duration,
+          i.width,
+          i.height,
           COALESCE(
             (
               SELECT COUNT(*)::int
@@ -133,7 +143,7 @@ export async function GET(
         LEFT JOIN images i ON s.image_id = i.id
         LEFT JOIN groups g ON sgs.group_id = g.id
         WHERE s.id = $1 AND gm.user_id = $2
-        GROUP BY s.id, s.user_id, s.content, s.image_id, s.created_at, s.updated_at, s.edited_at, u.username, u.display_name, u.profile_picture_url, i.image_url, i.thumbnail_url, i.file_name, i.file_size, i.mime_type`,
+        GROUP BY s.id, s.user_id, s.content, s.image_id, s.created_at, s.updated_at, s.edited_at, u.username, u.display_name, u.profile_picture_url, i.image_url, i.media_url, i.thumbnail_url, i.file_name, i.file_size, i.mime_type, i.media_type, i.duration, i.width, i.height`,
         [strandId, authUser.userId]
       );
     }
@@ -165,10 +175,15 @@ export async function GET(
       image: row.image_id ? {
         id: row.image_id,
         imageUrl: row.image_url,
+        mediaUrl: row.media_url || row.image_url,
         thumbnailUrl: row.thumbnail_url,
         fileName: row.file_name,
         fileSize: row.file_size,
         mimeType: row.mime_type,
+        mediaType: row.media_type || (row.mime_type?.startsWith('video/') ? 'video' : 'image'),
+        duration: row.duration,
+        width: row.width,
+        height: row.height,
       } : null,
       groups: row.groups || [],
     };

@@ -43,6 +43,22 @@ export const uploadImageSchema = z.object({
   groupIds: z.array(z.string().uuid('Invalid group ID')).min(1, 'At least one group is required'),
 });
 
+// Media validation schema (for direct uploads)
+export const createMediaSchema = z.object({
+  mediaUrl: z.string().url('Invalid media URL'),
+  thumbnailUrl: z.string().url('Invalid thumbnail URL').optional(),
+  fileName: z.string().min(1, 'File name is required').max(255, 'File name too long'),
+  fileSize: z.number().int().positive('File size must be positive'),
+  mimeType: z.string().min(1, 'MIME type is required').max(50, 'MIME type too long'),
+  mediaType: z.enum(['image', 'video'], {
+    errorMap: () => ({ message: 'Media type must be either image or video' }),
+  }),
+  duration: z.number().int().nonnegative('Duration must be non-negative').optional(),
+  width: z.number().int().positive('Width must be positive').optional(),
+  height: z.number().int().positive('Height must be positive').optional(),
+  groupIds: z.array(z.string().uuid('Invalid group ID')).optional(),
+});
+
 // Strand validation schemas
 export const createStrandSchema = z.object({
   content: z.string().max(5000, 'Content must be 5000 characters or less').optional(),
@@ -81,6 +97,7 @@ export type UpdateFriendRequestInput = z.infer<typeof updateFriendRequestSchema>
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;
 export type AddMembersToGroupInput = z.infer<typeof addMembersToGroupSchema>;
 export type UploadImageInput = z.infer<typeof uploadImageSchema>;
+export type CreateMediaInput = z.infer<typeof createMediaSchema>;
 export type CreateStrandInput = z.infer<typeof createStrandSchema>;
 export type UpdateStrandInput = z.infer<typeof updateStrandSchema>;
 export type PinStrandInput = z.infer<typeof pinStrandSchema>;

@@ -47,13 +47,18 @@ self.addEventListener('activate', function(event) {
 
 // Fetch event - serve from cache when offline, fallback to network
 self.addEventListener('fetch', function(event) {
-  // Skip non-GET requests
+  // Skip non-GET requests (including POST for share target)
   if (event.request.method !== 'GET') {
     return;
   }
 
   // Skip API requests - always use network for API calls
   if (event.request.url.includes('/api/')) {
+    return;
+  }
+
+  // Skip share handler route - always use network for share target
+  if (event.request.url.includes('/upload/share')) {
     return;
   }
 

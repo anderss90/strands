@@ -7,6 +7,7 @@ import { Strand } from '@/types/strand';
 import { Comment } from '@/types/comment';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import LinkText from '@/components/common/LinkText';
+import VideoPlayer from '@/components/media/VideoPlayer';
 import { strandApi } from '@/lib/api';
 
 interface StrandViewerProps {
@@ -276,6 +277,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   const canEditDelete = isOwner || isAdmin;
   const hasImage = !!strand.imageId && strand.image;
   const hasText = !!strand.content;
+  const isVideo = strand.image?.mediaType === 'video' || strand.image?.mimeType?.startsWith('video/');
 
   return (
     <div className="fixed inset-x-0 top-0 bottom-16 bg-black z-[100] flex flex-col animate-fade-in overflow-hidden">
@@ -361,15 +363,24 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="flex flex-col">
-          {/* Image (if present) */}
+          {/* Image or Video (if present) */}
           {hasImage && strand.image && (
             <div className="flex-shrink-0 flex items-center justify-center min-h-[40vh] p-4 animate-scale-in">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={strand.image.imageUrl}
-                alt={strand.image.fileName || 'Strand image'}
-                className="max-w-full max-h-[70vh] object-contain transition-transform duration-300"
-              />
+              {isVideo ? (
+                <VideoPlayer
+                  src={strand.image.imageUrl || strand.image.mediaUrl || ''}
+                  poster={strand.image.thumbnailUrl || undefined}
+                  className="max-w-full max-h-[70vh]"
+                  controls
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={strand.image.imageUrl || strand.image.mediaUrl || ''}
+                  alt={strand.image.fileName || 'Strand image'}
+                  className="max-w-full max-h-[70vh] object-contain transition-transform duration-300"
+                />
+              )}
             </div>
           )}
 

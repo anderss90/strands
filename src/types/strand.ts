@@ -18,10 +18,15 @@ export interface Strand {
   image?: {
     id: string;
     imageUrl: string;
+    mediaUrl?: string;
     thumbnailUrl: string | null;
     fileName: string;
     fileSize: number;
     mimeType: string;
+    mediaType?: 'image' | 'video';
+    duration?: number;
+    width?: number;
+    height?: number;
   };
   groups?: {
     id: string;

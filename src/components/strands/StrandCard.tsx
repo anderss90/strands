@@ -14,6 +14,7 @@ interface StrandCardProps {
 export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCardProps) {
   const hasImage = !!strand.imageId && strand.image;
   const hasText = !!strand.content;
+  const isVideo = strand.image?.mediaType === 'video' || strand.image?.mimeType?.startsWith('video/');
   const [localFireCount, setLocalFireCount] = useState(strand.fireCount || 0);
   const [localHasUserFired, setLocalHasUserFired] = useState(strand.hasUserFired || false);
   const [firing, setFiring] = useState(false);
@@ -67,11 +68,25 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
         <div className="relative aspect-square bg-gray-700 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={strand.image.thumbnailUrl || strand.image.imageUrl}
-            alt={strand.image.fileName || 'Strand image'}
+            src={strand.image.thumbnailUrl || strand.image.imageUrl || strand.image.mediaUrl || ''}
+            alt={strand.image.fileName || (isVideo ? 'Strand video' : 'Strand image')}
             className="w-full h-full object-cover"
             loading="lazy"
           />
+          {isVideo && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <div className="bg-black/60 rounded-full p-3">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+              {strand.image.duration && (
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                  {Math.floor(strand.image.duration / 60)}:{(strand.image.duration % 60).toString().padStart(2, '0')}
+                </div>
+              )}
+            </div>
+          )}
           {strand.isPinned && (
             <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">

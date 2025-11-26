@@ -72,10 +72,15 @@ export async function GET(
           u.display_name,
           u.profile_picture_url,
           i.image_url,
+          i.media_url,
           i.thumbnail_url,
           i.file_name,
           i.file_size,
           i.mime_type,
+          i.media_type,
+          i.duration,
+          i.width,
+          i.height,
           sp.pinned_at,
           COALESCE(
             (
@@ -115,10 +120,15 @@ export async function GET(
           u.display_name,
           u.profile_picture_url,
           i.image_url,
+          i.media_url,
           i.thumbnail_url,
           i.file_name,
           i.file_size,
           i.mime_type,
+          i.media_type,
+          i.duration,
+          i.width,
+          i.height,
           sp.pinned_at,
           CASE WHEN sp.id IS NOT NULL THEN 1 ELSE 0 END as is_pinned,
           COALESCE(
@@ -166,10 +176,15 @@ export async function GET(
       image: row.image_id ? {
         id: row.image_id,
         imageUrl: row.image_url,
+        mediaUrl: row.media_url || row.image_url,
         thumbnailUrl: row.thumbnail_url,
         fileName: row.file_name,
         fileSize: row.file_size,
         mimeType: row.mime_type,
+        mediaType: row.media_type || (row.mime_type?.startsWith('video/') ? 'video' : 'image'),
+        duration: row.duration,
+        width: row.width,
+        height: row.height,
       } : null,
     }));
 

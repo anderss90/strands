@@ -2,13 +2,38 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useState } from 'react';
 import StrandCreate from '@/components/strands/StrandCreate';
 
 function UploadPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const groupId = searchParams.get('groupId');
+  const [sharedImage, setSharedImage] = useState<File | null>(null);
+
+  // Check for shared image from sessionStorage
+  useEffect(() => {
+    const sharedImageData = sessionStorage.getItem('sharedImage');
+    if (sharedImageData) {
+      try {
+        const imageData = JSON.parse(sharedImageData);
+        // Convert base64 back to File
+        const binaryString = atob(imageData.data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: imageData.type });
+        const file = new File([blob], imageData.name, { type: imageData.type });
+        setSharedImage(file);
+        // Clear sessionStorage after retrieving
+        sessionStorage.removeItem('sharedImage');
+      } catch (error) {
+        console.error('Error processing shared image:', error);
+        sessionStorage.removeItem('sharedImage');
+      }
+    }
+  }, []);
 
   const handleSuccess = () => {
     if (groupId) {
@@ -27,7 +52,11 @@ function UploadPageContent() {
         </div>
 
         <div className="bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-700">
-          <StrandCreate onSuccess={handleSuccess} preselectedGroupId={groupId || undefined} />
+          <StrandCreate 
+            onSuccess={handleSuccess} 
+            preselectedGroupId={groupId || undefined}
+            sharedImage={sharedImage}
+          />
         </div>
       </div>
     </div>

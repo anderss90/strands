@@ -90,10 +90,15 @@ export async function GET(request: NextRequest) {
         u.display_name,
         u.profile_picture_url,
         i.image_url,
+        i.media_url,
         i.thumbnail_url,
         i.file_name,
         i.file_size,
         i.mime_type,
+        i.media_type,
+        i.duration,
+        i.width,
+        i.height,
         COALESCE(
           (
             SELECT COUNT(*)::int
@@ -148,10 +153,15 @@ export async function GET(request: NextRequest) {
       image: row.image_id ? {
         id: row.image_id,
         imageUrl: row.image_url,
+        mediaUrl: row.media_url || row.image_url,
         thumbnailUrl: row.thumbnail_url,
         fileName: row.file_name,
         fileSize: row.file_size,
         mimeType: row.mime_type,
+        mediaType: row.media_type || (row.mime_type?.startsWith('video/') ? 'video' : 'image'),
+        duration: row.duration,
+        width: row.width,
+        height: row.height,
       } : null,
       groups: row.groups || [],
     }));
@@ -191,18 +201,53 @@ export async function POST(request: NextRequest) {
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
     
-    // Parse form data
-    const formData = await request.formData();
-    const content = formData.get('content') as string | null;
-    const file = formData.get('file') as File | null;
-    const groupIdsJson = formData.get('groupIds') as string | null;
+    // Check content type to determine if it's JSON or FormData
+    const contentType = request.headers.get('content-type') || '';
+    let content: string | null = null;
+    let file: File | null = null;
+    let imageId: string | null = null;
+    let groupIds: string[] = [];
 
-    // Validate: at least content or file must be provided
-    if (!content?.trim() && !file) {
-      return NextResponse.json(
-        { message: 'Either content or image (or both) is required' },
-        { status: 400 }
-      );
+    if (contentType.includes('application/json')) {
+      // Handle JSON request (for direct uploads)
+      const body = await request.json();
+      content = body.content || null;
+      imageId = body.imageId || null;
+      groupIds = body.groupIds || [];
+
+      // Validate: at least content or imageId must be provided
+      if (!content?.trim() && !imageId) {
+        return NextResponse.json(
+          { message: 'Either content or image (or both) is required' },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Handle FormData request (traditional upload)
+      const formData = await request.formData();
+      content = formData.get('content') as string | null;
+      file = formData.get('file') as File | null;
+      const groupIdsJson = formData.get('groupIds') as string | null;
+
+      // Validate: at least content or file must be provided
+      if (!content?.trim() && !file) {
+        return NextResponse.json(
+          { message: 'Either content or image (or both) is required' },
+          { status: 400 }
+        );
+      }
+
+      // Parse group IDs from JSON string
+      if (groupIdsJson) {
+        try {
+          groupIds = JSON.parse(groupIdsJson);
+        } catch (error) {
+          return NextResponse.json(
+            { message: 'Invalid group IDs format' },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Validate content length if provided
@@ -213,25 +258,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse and validate group IDs
-    let groupIds: string[] = [];
-    if (groupIdsJson) {
-      try {
-        groupIds = JSON.parse(groupIdsJson);
-        const validatedData = createStrandSchema.parse({ content: content || undefined, groupIds });
-        groupIds = validatedData.groupIds;
-      } catch (error: any) {
-        if (error.name === 'ZodError') {
-          return NextResponse.json(
-            { message: 'Validation error', errors: error.errors },
-            { status: 400 }
-          );
-        }
+    // Validate group IDs
+    try {
+      const validatedData = createStrandSchema.parse({ content: content || undefined, groupIds });
+      groupIds = validatedData.groupIds;
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
         return NextResponse.json(
-          { message: 'Invalid group IDs format' },
+          { message: 'Validation error', errors: error.errors },
           { status: 400 }
         );
       }
+      return NextResponse.json(
+        { message: 'Invalid group IDs format' },
+        { status: 400 }
+      );
     }
 
     // Verify user is a member of all groups
@@ -262,10 +303,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let imageId: string | null = null;
-
-    // Upload image if provided
-    if (file) {
+    // If imageId is provided (from direct upload), use it
+    // Otherwise, upload file if provided
+    if (!imageId && file) {
       // Validate file type
       // On iOS, file.type can be empty, so we also check the file extension
       const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
@@ -342,6 +382,14 @@ export async function POST(request: NextRequest) {
       );
 
       imageId = imageResult.rows[0].id;
+    }
+
+    // If no imageId and no file, we can't create a strand
+    if (!imageId && !content?.trim()) {
+      return NextResponse.json(
+        { message: 'Either content or image (or both) is required' },
+        { status: 400 }
+      );
     }
 
     // Create strand
