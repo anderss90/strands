@@ -43,12 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - "Choose from Gallery" button remains unchanged
   - Updated UI to show three buttons in a grid layout (photo, video, gallery)
 - **Fixed video thumbnail display in strands feed**
-  - Videos now display directly using video element (not hidden)
-  - Video element uses `preload="metadata"` and seeks to 0.1s on load
-  - Automatically pauses after seeking to show first frame as thumbnail
-  - Uses `poster` attribute if thumbnailUrl is available from database
+  - Videos now generate thumbnails client-side during upload
+  - Thumbnail is extracted from video at 0.1 seconds using canvas API
+  - Thumbnail is uploaded to Supabase Storage alongside the video
+  - Thumbnail URL is stored in database and displayed in feed
+  - Feed now shows thumbnail image for videos (not video element)
+  - Falls back to video element with frame extraction if thumbnail missing
   - Play button overlay and duration indicator remain visible on video thumbnails
-  - Simplified approach avoids CORS issues with canvas extraction
 
 ## [Previous Changes]
 

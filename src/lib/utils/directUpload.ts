@@ -262,3 +262,75 @@ export function getVideoMetadata(file: File): Promise<{
   });
 }
 
+/**
+ * Generates a thumbnail from a video file
+ * Extracts a frame at 0.1 seconds (or 10% of duration, whichever is smaller)
+ * 
+ * @param file Video file
+ * @returns Promise with thumbnail as Blob
+ */
+export function generateVideoThumbnail(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    
+    const handleLoadedMetadata = () => {
+      // Seek to 0.1 seconds or 10% of duration, whichever is smaller
+      const seekTime = Math.min(0.1, video.duration / 10);
+      video.currentTime = seekTime;
+    };
+
+    const handleSeeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          throw new Error('Failed to get canvas context');
+        }
+        
+        // Draw video frame to canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          window.URL.revokeObjectURL(video.src);
+          video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+          video.removeEventListener('seeked', handleSeeked);
+          video.removeEventListener('error', handleError);
+          
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to generate thumbnail blob'));
+          }
+        }, 'image/jpeg', 0.8);
+      } catch (error) {
+        window.URL.revokeObjectURL(video.src);
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        video.removeEventListener('seeked', handleSeeked);
+        video.removeEventListener('error', handleError);
+        reject(error);
+      }
+    };
+
+    const handleError = () => {
+      window.URL.revokeObjectURL(video.src);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('seeked', handleSeeked);
+      video.removeEventListener('error', handleError);
+      reject(new Error('Failed to load video for thumbnail generation'));
+    };
+    
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('seeked', handleSeeked);
+    video.addEventListener('error', handleError);
+    
+    video.src = URL.createObjectURL(file);
+  });
+}
+

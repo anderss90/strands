@@ -6,7 +6,7 @@ import { groupApi, Group } from '@/lib/api';
 import { fetchWithRetry, isNetworkError, getErrorMessage } from '@/lib/utils/fetchWithRetry';
 import { useMediaPermissions } from '@/hooks/useMediaPermissions';
 import { compressImage, needsCompression } from '@/lib/utils/imageCompression';
-import { directUploadToSupabase, shouldUseDirectUpload, getVideoMetadata, validateVideoSize } from '@/lib/utils/directUpload';
+import { directUploadToSupabase, shouldUseDirectUpload, getVideoMetadata, validateVideoSize, generateVideoThumbnail } from '@/lib/utils/directUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { isValidMedia, getMediaType, validateFileSize, MAX_VIDEO_SIZE } from '@/types/media';
 
@@ -426,16 +426,47 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
           },
         });
 
-        setUploadProgress(90);
+        setUploadProgress(50);
 
-        // Get video metadata if it's a video
+        // Get video metadata and generate thumbnail if it's a video
         let videoMeta = null;
+        let thumbnailUrl: string | null = null;
+        
         if (isVideo && fileToUpload) {
           try {
             videoMeta = await getVideoMetadata(fileToUpload);
+            setUploadProgress(60);
+            
+            // Generate thumbnail
+            try {
+              const thumbnailBlob = await generateVideoThumbnail(fileToUpload);
+              setUploadProgress(70);
+              
+              // Upload thumbnail to Supabase Storage
+              const thumbnailFile = new File([thumbnailBlob], `thumbnail_${fileToUpload.name.replace(/\.[^/.]+$/, '')}.jpg`, {
+                type: 'image/jpeg',
+              });
+              
+              const thumbnailUploadResult = await directUploadToSupabase({
+                file: thumbnailFile,
+                userId: user.id,
+                onProgress: (progress) => {
+                  // Map thumbnail upload progress (70-90%)
+                  setUploadProgress(70 + (progress.percentage * 0.2));
+                },
+              });
+              
+              thumbnailUrl = thumbnailUploadResult.publicUrl;
+              setUploadProgress(90);
+            } catch (err) {
+              console.warn('Failed to generate video thumbnail:', err);
+              // Continue without thumbnail
+            }
           } catch (err) {
             console.warn('Failed to get video metadata:', err);
           }
+        } else {
+          setUploadProgress(90);
         }
 
         // Save metadata via API
@@ -447,7 +478,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
           },
           body: JSON.stringify({
             mediaUrl: uploadResult.publicUrl,
-            thumbnailUrl: isVideo ? uploadResult.publicUrl : uploadResult.publicUrl, // For now, use same URL
+            thumbnailUrl: thumbnailUrl || (isVideo ? undefined : uploadResult.publicUrl),
             fileName: fileToUpload.name,
             fileSize: fileToUpload.size,
             mimeType: fileToUpload.type || fileData?.type || 'application/octet-stream',

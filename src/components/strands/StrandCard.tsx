@@ -69,26 +69,35 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
       {hasImage && strand.image && (
         <div className="relative aspect-square bg-gray-700 overflow-hidden">
           {isVideo ? (
-            <video
-              ref={videoRef}
-              src={strand.image.mediaUrl || strand.image.imageUrl || ''}
-              poster={strand.image.thumbnailUrl || undefined}
-              className="w-full h-full object-cover"
-              preload="metadata"
-              playsInline
-              muted
-              onLoadedMetadata={(e) => {
-                // Seek to first frame to show as thumbnail
-                const video = e.currentTarget;
-                if (video.duration && !strand.image?.thumbnailUrl) {
-                  video.currentTime = Math.min(0.1, video.duration / 10);
-                }
-              }}
-              onSeeked={(e) => {
-                // Pause after seeking to show the frame
-                e.currentTarget.pause();
-              }}
-            />
+            strand.image.thumbnailUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={strand.image.thumbnailUrl}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <video
+                ref={videoRef}
+                src={strand.image.mediaUrl || strand.image.imageUrl || ''}
+                className="w-full h-full object-cover"
+                preload="metadata"
+                playsInline
+                muted
+                onLoadedMetadata={(e) => {
+                  // Seek to first frame to show as thumbnail if no thumbnail URL
+                  const video = e.currentTarget;
+                  if (video.duration) {
+                    video.currentTime = Math.min(0.1, video.duration / 10);
+                  }
+                }}
+                onSeeked={(e) => {
+                  // Pause after seeking to show the frame
+                  e.currentTarget.pause();
+                }}
+              />
+            )
           ) : (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
