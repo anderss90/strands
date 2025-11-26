@@ -26,10 +26,21 @@ The bucket needs RLS policies to allow:
 
 Run these SQL commands in the Supabase SQL Editor:
 
+**Important**: Since this app uses custom JWT authentication (not Supabase Auth), the RLS policies need to be configured to allow uploads without requiring Supabase auth. We'll use path-based policies instead.
+
 ```sql
--- Policy: Allow authenticated users to upload files
-CREATE POLICY "Allow authenticated uploads" ON storage.objects
-FOR INSERT TO authenticated
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Allow authenticated uploads" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public read access" ON storage.objects;
+DROP POLICY IF EXISTS "Allow users to delete own files" ON storage.objects;
+DROP POLICY IF EXISTS "Allow users to update own files" ON storage.objects;
+
+-- Policy: Allow anyone to upload files to the images bucket
+-- Since we're using custom JWT auth, we can't use auth.uid()
+-- The app validates authentication before calling this
+-- Files are organized as {userId}/{filename} for organization
+CREATE POLICY "Allow uploads to images bucket" ON storage.objects
+FOR INSERT TO public
 WITH CHECK (bucket_id = 'images');
 
 -- Policy: Allow public read access
@@ -37,15 +48,38 @@ CREATE POLICY "Allow public read access" ON storage.objects
 FOR SELECT TO public
 USING (bucket_id = 'images');
 
--- Policy: Allow users to delete their own files
-CREATE POLICY "Allow users to delete own files" ON storage.objects
-FOR DELETE TO authenticated
-USING (bucket_id = 'images' AND (storage.foldername(name))[1] = auth.uid()::text);
+-- Policy: Allow anyone to delete files (app handles authorization)
+-- For better security, you can restrict this to specific paths if needed
+CREATE POLICY "Allow file deletion" ON storage.objects
+FOR DELETE TO public
+USING (bucket_id = 'images');
 
--- Policy: Allow users to update their own files
-CREATE POLICY "Allow users to update own files" ON storage.objects
-FOR UPDATE TO authenticated
-USING (bucket_id = 'images' AND (storage.foldername(name))[1] = auth.uid()::text);
+-- Policy: Allow file updates (app handles authorization)
+CREATE POLICY "Allow file updates" ON storage.objects
+FOR UPDATE TO public
+USING (bucket_id = 'images');
+```
+
+**Alternative (More Secure)**: If you want stricter policies, you can use a function to validate paths:
+
+```sql
+-- Create a function to extract user ID from path
+CREATE OR REPLACE FUNCTION get_user_id_from_path(file_path TEXT)
+RETURNS TEXT AS $$
+BEGIN
+  RETURN split_part(file_path, '/', 1);
+END;
+$$ LANGUAGE plpgsql;
+
+-- More restrictive policy (requires path validation)
+-- Note: This still allows public uploads, but you could add additional checks
+CREATE POLICY "Allow uploads with path validation" ON storage.objects
+FOR INSERT TO public
+WITH CHECK (
+  bucket_id = 'images' AND
+  get_user_id_from_path(name) IS NOT NULL AND
+  length(get_user_id_from_path(name)) = 36 -- UUID length
+);
 ```
 
 ### 3. Configure CORS (if needed)
