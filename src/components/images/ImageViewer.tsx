@@ -23,9 +23,26 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [deletingComment, setDeletingComment] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreenSupported, setIsFullscreenSupported] = useState(false);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const imageContainerRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const { user } = useAuth();
+
+  // Check if fullscreen is supported
+  useEffect(() => {
+    const checkFullscreenSupport = () => {
+      const doc = document as any;
+      const isSupported = !!(
+        doc.fullscreenEnabled ||
+        doc.webkitFullscreenEnabled ||
+        doc.mozFullScreenEnabled ||
+        doc.msFullscreenEnabled
+      );
+      setIsFullscreenSupported(isSupported);
+    };
+    checkFullscreenSupport();
+  }, []);
 
   useEffect(() => {
     fetchImage();
@@ -130,22 +147,23 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
   };
 
   const handleFullscreen = async () => {
-    if (!imageRef.current) return;
+    const element = imageContainerRef.current || imageRef.current;
+    if (!element) return;
 
     try {
       if (!isFullscreen) {
         // Enter fullscreen
-        if (imageRef.current.requestFullscreen) {
-          await imageRef.current.requestFullscreen();
-        } else if ((imageRef.current as any).webkitRequestFullscreen) {
+        if (element.requestFullscreen) {
+          await element.requestFullscreen();
+        } else if ((element as any).webkitRequestFullscreen) {
           // Safari
-          await (imageRef.current as any).webkitRequestFullscreen();
-        } else if ((imageRef.current as any).mozRequestFullScreen) {
+          await (element as any).webkitRequestFullscreen();
+        } else if ((element as any).mozRequestFullScreen) {
           // Firefox
-          await (imageRef.current as any).mozRequestFullScreen();
-        } else if ((imageRef.current as any).msRequestFullscreen) {
+          await (element as any).mozRequestFullScreen();
+        } else if ((element as any).msRequestFullscreen) {
           // IE/Edge
-          await (imageRef.current as any).msRequestFullscreen();
+          await (element as any).msRequestFullscreen();
         }
       } else {
         // Exit fullscreen
@@ -164,6 +182,17 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
       }
     } catch (error: any) {
       console.error('Error toggling fullscreen:', error);
+      // Fallback: try to make the entire viewer fullscreen
+      if (!isFullscreen && imageContainerRef.current) {
+        try {
+          const viewer = imageContainerRef.current.closest('.fixed');
+          if (viewer && (viewer as any).requestFullscreen) {
+            await (viewer as any).requestFullscreen();
+          }
+        } catch (fallbackError) {
+          console.error('Fallback fullscreen also failed:', fallbackError);
+        }
+      }
     }
   };
 
@@ -251,8 +280,9 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={handleFullscreen}
-            className="text-white p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-200 active:scale-95"
-            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            disabled={!isFullscreenSupported}
+            className="text-white p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!isFullscreenSupported ? "Fullscreen not supported" : isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >
             {isFullscreen ? (
               <svg
@@ -318,15 +348,18 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="flex flex-col">
           {/* Image */}
-          <div className="flex-shrink-0 flex items-center justify-center min-h-[40vh] p-4 animate-scale-in">
+          <div 
+            ref={imageContainerRef}
+            className="flex-shrink-0 flex items-center justify-center min-h-[40vh] p-4 animate-scale-in cursor-pointer"
+            onClick={handleFullscreen}
+            title="Click to toggle fullscreen"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={imageRef}
               src={image.imageUrl}
               alt={image.fileName}
-              className="max-w-full max-h-[70vh] object-contain transition-transform duration-300 cursor-pointer"
-              onClick={handleFullscreen}
-              title="Click to toggle fullscreen"
+              className="max-w-full max-h-[70vh] object-contain transition-transform duration-300"
             />
           </div>
 
