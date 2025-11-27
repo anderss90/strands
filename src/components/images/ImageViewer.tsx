@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { imageApi, Image, Comment } from '@/lib/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { formatDateTime } from '@/lib/utils/dateFormat';
+import FullscreenZoomableImage from '@/components/media/FullscreenZoomableImage';
 
 interface ImageViewerProps {
   imageId: string;
@@ -22,27 +23,8 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [deletingComment, setDeletingComment] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isFullscreenSupported, setIsFullscreenSupported] = useState(false);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const imageContainerRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const { user } = useAuth();
-
-  // Check if fullscreen is supported
-  useEffect(() => {
-    const checkFullscreenSupport = () => {
-      const doc = document as any;
-      const isSupported = !!(
-        doc.fullscreenEnabled ||
-        doc.webkitFullscreenEnabled ||
-        doc.mozFullScreenEnabled ||
-        doc.msFullscreenEnabled
-      );
-      setIsFullscreenSupported(isSupported);
-    };
-    checkFullscreenSupport();
-  }, []);
 
   useEffect(() => {
     fetchImage();
@@ -146,80 +128,6 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
     }
   };
 
-  const handleFullscreen = async () => {
-    const element = imageContainerRef.current || imageRef.current;
-    if (!element) return;
-
-    try {
-      if (!isFullscreen) {
-        // Enter fullscreen
-        if (element.requestFullscreen) {
-          await element.requestFullscreen();
-        } else if ((element as any).webkitRequestFullscreen) {
-          // Safari
-          await (element as any).webkitRequestFullscreen();
-        } else if ((element as any).mozRequestFullScreen) {
-          // Firefox
-          await (element as any).mozRequestFullScreen();
-        } else if ((element as any).msRequestFullscreen) {
-          // IE/Edge
-          await (element as any).msRequestFullscreen();
-        }
-      } else {
-        // Exit fullscreen
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          // Safari
-          await (document as any).webkitExitFullscreen();
-        } else if ((document as any).mozCancelFullScreen) {
-          // Firefox
-          await (document as any).mozCancelFullScreen();
-        } else if ((document as any).msExitFullscreen) {
-          // IE/Edge
-          await (document as any).msExitFullscreen();
-        }
-      }
-    } catch (error: any) {
-      console.error('Error toggling fullscreen:', error);
-      // Fallback: try to make the entire viewer fullscreen
-      if (!isFullscreen && imageContainerRef.current) {
-        try {
-          const viewer = imageContainerRef.current.closest('.fixed');
-          if (viewer && (viewer as any).requestFullscreen) {
-            await (viewer as any).requestFullscreen();
-          }
-        } catch (fallbackError) {
-          console.error('Fallback fullscreen also failed:', fallbackError);
-        }
-      }
-    }
-  };
-
-  // Listen for fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!(
-        document.fullscreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).mozFullScreenElement ||
-        (document as any).msFullscreenElement
-      );
-      setIsFullscreen(isCurrentlyFullscreen);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-    };
-  }, []);
 
   if (loading) {
     return (
@@ -277,27 +185,15 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
         <div className="flex-1 text-white text-center font-medium">
           {image.user?.displayName || 'Image'}
         </div>
-        <div className="flex items-center gap-2">
+        {canDeleteImage ? (
           <button
-            onClick={handleFullscreen}
-            disabled={!isFullscreenSupported}
-            className="text-white p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={!isFullscreenSupported ? "Fullscreen not supported" : isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-red-500 p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50 transition-all duration-200 active:scale-95"
+            title={isAdmin && !isOwner ? "Delete image (Admin)" : "Delete image"}
           >
-            {isFullscreen ? (
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6h12v12"
-                />
-              </svg>
+            {deleting ? (
+              <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
             ) : (
               <svg
                 className="w-6 h-6"
@@ -309,57 +205,29 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                 />
               </svg>
             )}
           </button>
-          {canDeleteImage && (
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-red-500 p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50 transition-all duration-200 active:scale-95"
-              title={isAdmin && !isOwner ? "Delete image (Admin)" : "Delete image"}
-            >
-              {deleting ? (
-                <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              )}
-            </button>
-          )}
-          {!canDeleteImage && <div className="w-[44px]" />}
-        </div>
+        ) : (
+          <div className="w-[44px]" />
+        )}
       </div>
 
       {/* Scrollable Content Area - Everything scrolls together */}
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="flex flex-col">
           {/* Image */}
-          <div 
-            ref={imageContainerRef}
-            className="flex-shrink-0 flex items-center justify-center min-h-[40vh] p-4 animate-scale-in cursor-pointer"
-            onClick={handleFullscreen}
-            title="Click to toggle fullscreen"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              ref={imageRef}
+          <div className="flex-shrink-0 flex items-center justify-center min-h-[40vh] max-h-[70vh] p-4 animate-scale-in">
+            <FullscreenZoomableImage
               src={image.imageUrl}
               alt={image.fileName}
-              className="max-w-full max-h-[70vh] object-contain transition-transform duration-300"
+              className="w-full h-full"
+              maxZoom={4}
+              minZoom={1}
+              doubleTapZoom={2.5}
+              showControls={true}
             />
           </div>
 

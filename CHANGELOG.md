@@ -88,12 +88,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subscription is created and sent to server automatically
   - Fails silently if notifications are not supported or permission is denied
   - Users can still manually enable/disable notifications from the profile page
-- **Fullscreen image viewing**
-  - Added fullscreen button to ImageViewer header
-  - Click image or fullscreen button to toggle fullscreen mode
-  - Supports native Fullscreen API with cross-browser compatibility (Chrome, Firefox, Safari, Edge)
-  - Fullscreen state is tracked and button icon updates accordingly
-  - Exit fullscreen via button, ESC key, or clicking the image again
+- **Unified fullscreen and zoom image viewer**
+  - Created `FullscreenZoomableImage` component combining fullscreen and zoom functionality
+  - Replaced separate zoom and fullscreen implementations with unified solution
+  - Fullscreen mode: Double-click image or click fullscreen button to enter fullscreen
+  - Zoom in fullscreen: Pinch-to-zoom (mobile), Ctrl/Cmd+scroll (desktop), or double-click
+  - Pan when zoomed: Drag to move around zoomed image
+  - Zoom controls: Zoom in/out/reset buttons appear in fullscreen mode
+  - Exit fullscreen: Click exit button, press ESC, or double-click again
+  - Used in both ImageViewer and StrandViewer for consistent experience
+  - Cross-browser fullscreen support (Chrome, Firefox, Safari, Edge)
 
 ## [Previous Changes]
 

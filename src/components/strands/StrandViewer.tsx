@@ -8,7 +8,7 @@ import { Comment } from '@/types/comment';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import LinkText from '@/components/common/LinkText';
 import VideoPlayer from '@/components/media/VideoPlayer';
-import ZoomableImage from '@/components/media/ZoomableImage';
+import FullscreenZoomableImage from '@/components/media/FullscreenZoomableImage';
 import { strandApi } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils/dateFormat';
 
@@ -376,13 +376,14 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
                   controls
                 />
               ) : (
-                <ZoomableImage
+                <FullscreenZoomableImage
                   src={strand.image.imageUrl || strand.image.mediaUrl || ''}
                   alt={strand.image.fileName || 'Strand image'}
                   className="w-full h-full"
                   maxZoom={4}
                   minZoom={1}
                   doubleTapZoom={2.5}
+                  showControls={true}
                 />
               )}
             </div>
