@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { registerServiceWorker, checkForServiceWorkerUpdate } from '@/lib/utils/serviceWorkerUpdate';
 
 export default function NotificationManager() {
   const { isAuthenticated } = useAuth();
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [hasUpdate, setHasUpdate] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -16,17 +18,39 @@ export default function NotificationManager() {
     setIsSupported(true);
     setPermission(Notification.permission);
 
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((registration) => {
-          console.log('Service Worker registered:', registration);
-        })
-        .catch((error) => {
-          console.error('Service Worker registration failed:', error);
+    // Register service worker with update checking
+    registerServiceWorker().then((registration) => {
+      if (registration) {
+        console.log('Service Worker registered:', registration);
+        
+        // Check for updates immediately
+        checkForServiceWorkerUpdate().then((state) => {
+          if (state.hasUpdate) {
+            setHasUpdate(true);
+          }
         });
-    }
+      }
+    });
+
+    // Listen for update available event
+    const handleUpdateAvailable = () => {
+      setHasUpdate(true);
+    };
+    window.addEventListener('sw-update-available', handleUpdateAvailable);
+
+    // Check for updates periodically
+    const updateInterval = setInterval(() => {
+      checkForServiceWorkerUpdate().then((state) => {
+        if (state.hasUpdate) {
+          setHasUpdate(true);
+        }
+      });
+    }, 60000); // Check every minute
+
+    return () => {
+      window.removeEventListener('sw-update-available', handleUpdateAvailable);
+      clearInterval(updateInterval);
+    };
   }, []);
 
   // Note: Permission request is now handled manually via the Profile page

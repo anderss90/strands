@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Service Worker Update System**
+  - Automatic update checking on app load and every 60 seconds
+  - Update prompt component that appears when a new version is available
+  - Force update functionality to immediately apply new service worker versions
+  - Version-based cache busting (update CACHE_VERSION in sw.js to force cache refresh)
+  - Users can now easily update the app when new versions are deployed
 - Changelog page accessible from the console page (`/console/changelog`)
 - Changelog API endpoint (`/api/changelog`) that fetches git commit history
 - Changelog component that displays recent changes grouped by date

@@ -1,6 +1,7 @@
 // Service Worker for Push Notifications and Offline Support
-
-const CACHE_NAME = 'strands-v1';
+// Cache version - update this when you want to force a cache refresh
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `strands-${CACHE_VERSION}`;
 const urlsToCache = [
   '/',
   '/home',
@@ -43,6 +44,13 @@ self.addEventListener('activate', function(event) {
   );
   // Take control of all pages immediately
   return self.clients.claim();
+});
+
+// Listen for skip waiting message from the page
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Fetch event - serve from cache when offline, fallback to network
