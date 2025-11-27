@@ -81,6 +81,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Zoom controls (zoom in, zoom out, reset buttons)
   - Zoom percentage indicator
   - Maximum zoom of 4x, default double-tap zoom of 2.5x
+- **Automatic notification enabling on login**
+  - Notifications are now automatically enabled when users log in or sign up
+  - Notifications are also enabled when users are already authenticated on page load
+  - Permission is requested automatically if not already granted
+  - Subscription is created and sent to server automatically
+  - Fails silently if notifications are not supported or permission is denied
+  - Users can still manually enable/disable notifications from the profile page
 
 ## [Previous Changes]
 

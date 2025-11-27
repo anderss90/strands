@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authApi } from '@/lib/api';
+import { enableNotificationsAuto } from '@/lib/utils/notifications';
 
 export interface User {
   id: string;
@@ -43,6 +44,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (apiModule.userApi && typeof apiModule.userApi.getProfile === 'function') {
               const userData = await apiModule.userApi.getProfile();
               setUser(userData);
+              
+              // Enable notifications automatically if user is already authenticated
+              // Don't await to avoid blocking auth check
+              enableNotificationsAuto().catch((error) => {
+                // Silently fail - notifications are optional
+                if (process.env.NODE_ENV !== 'test') {
+                  console.log('Failed to enable notifications automatically:', error);
+                }
+              });
             }
           } catch (error) {
             // If profile fetch fails, clear tokens
@@ -72,6 +82,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('accessToken', response.tokens.accessToken);
       localStorage.setItem('refreshToken', response.tokens.refreshToken);
       setUser(response.user);
+      
+      // Enable notifications automatically after successful login
+      // Don't await to avoid blocking login flow
+      enableNotificationsAuto().catch((error) => {
+        // Silently fail - notifications are optional
+        if (process.env.NODE_ENV !== 'test') {
+          console.log('Failed to enable notifications automatically:', error);
+        }
+      });
     } catch (error: any) {
       throw new Error(error.message || 'Login failed');
     }
@@ -83,6 +102,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('accessToken', response.tokens.accessToken);
       localStorage.setItem('refreshToken', response.tokens.refreshToken);
       setUser(response.user);
+      
+      // Enable notifications automatically after successful signup
+      // Don't await to avoid blocking signup flow
+      enableNotificationsAuto().catch((error) => {
+        // Silently fail - notifications are optional
+        if (process.env.NODE_ENV !== 'test') {
+          console.log('Failed to enable notifications automatically:', error);
+        }
+      });
+      
       return { groupId: response.groupId };
     } catch (error: any) {
       throw new Error(error.message || 'Signup failed');
