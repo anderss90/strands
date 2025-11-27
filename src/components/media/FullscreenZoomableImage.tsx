@@ -402,7 +402,7 @@ export default function FullscreenZoomableImage({
       {!isFullscreen && isFullscreenSupported && showControls && (
         <button
           onClick={handleFullscreen}
-          className="absolute top-4 right-4 bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 z-10"
+          className="absolute top-4 right-4 bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 z-10 flex items-center justify-center"
           title="Enter fullscreen"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -418,7 +418,7 @@ export default function FullscreenZoomableImage({
             <button
               onClick={handleZoomIn}
               disabled={scale >= maxZoom}
-              className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               title="Zoom in"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -428,7 +428,7 @@ export default function FullscreenZoomableImage({
             <button
               onClick={handleZoomOut}
               disabled={scale <= minZoom}
-              className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               title="Zoom out"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -438,7 +438,7 @@ export default function FullscreenZoomableImage({
             <button
               onClick={handleReset}
               disabled={scale <= minZoom}
-              className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               title="Reset zoom"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -450,7 +450,7 @@ export default function FullscreenZoomableImage({
           {/* Exit fullscreen button - top right */}
           <button
             onClick={handleFullscreen}
-            className="absolute top-4 right-4 bg-black/70 text-white p-3 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 z-10"
+            className="absolute top-4 right-4 bg-black/70 text-white p-3 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 z-10 flex items-center justify-center"
             title="Exit fullscreen"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
