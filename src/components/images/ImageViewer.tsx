@@ -293,9 +293,9 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
                   />
                 )}
                 <div>
-                  <p className="font-medium">@{image.user.username}</p>
+                  <p className="font-medium">{image.user.displayName || image.user.username}</p>
                   <p className="text-gray-400 text-xs">
-                    {formatDateTime(image.createdAt)}
+                    @{image.user.username} • {formatDateTime(image.createdAt)}
                   </p>
                 </div>
               </div>

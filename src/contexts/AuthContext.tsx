@@ -22,6 +22,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   signup: (username: string, password: string, inviteToken?: string) => Promise<{ groupId?: string }>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -124,6 +125,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    try {
+      const apiModule = await import('@/lib/api');
+      if (apiModule.userApi && typeof apiModule.userApi.getProfile === 'function') {
+        const userData = await apiModule.userApi.getProfile();
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -132,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         signup,
         logout,
+        refreshUser,
         isAuthenticated: !!user,
       }}
     >

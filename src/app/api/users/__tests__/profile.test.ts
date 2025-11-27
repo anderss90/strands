@@ -2,6 +2,7 @@ import { GET, PUT } from '../profile/route';
 import { NextRequest } from 'next/server';
 import { authenticateRequest, getAuthenticatedUser } from '@/lib/middleware';
 import { getUserById } from '@/lib/auth';
+import { query } from '@/lib/db';
 
 // Mock the middleware and auth utilities
 jest.mock('@/lib/middleware', () => ({
@@ -11,6 +12,10 @@ jest.mock('@/lib/middleware', () => ({
 
 jest.mock('@/lib/auth', () => ({
   getUserById: jest.fn(),
+}));
+
+jest.mock('@/lib/db', () => ({
+  query: jest.fn(),
 }));
 
 describe('GET /api/users/profile', () => {
@@ -88,21 +93,22 @@ describe('PUT /api/users/profile', () => {
   });
 
   it('returns user profile after update', async () => {
-    const mockUser = {
+    const updatedUser = {
       id: 'user-id',
       email: 'test@example.com',
       username: 'testuser',
-      password_hash: 'hashed_password',
       display_name: 'Updated Name',
       profile_picture_url: null,
       created_at: '2024-01-01',
-      updated_at: '2024-01-01',
+      updated_at: '2024-01-02',
     };
 
     (authenticateRequest as jest.Mock).mockResolvedValueOnce({
       user: { userId: 'user-id', email: 'test@example.com', username: 'testuser' },
     });
-    (getUserById as jest.Mock).mockResolvedValueOnce(mockUser);
+    (query as jest.Mock).mockResolvedValueOnce({
+      rows: [updatedUser],
+    });
 
     const request = new NextRequest('http://localhost/api/users/profile', {
       method: 'PUT',
@@ -116,6 +122,7 @@ describe('PUT /api/users/profile', () => {
 
     expect(response.status).toBe(200);
     expect(data).toHaveProperty('id', 'user-id');
+    expect(data).toHaveProperty('display_name', 'Updated Name');
     expect(data).not.toHaveProperty('password_hash');
   });
 

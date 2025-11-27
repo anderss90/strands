@@ -514,9 +514,9 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
                   />
                 )}
                 <div>
-                  <p className="font-medium">@{strand.user.username}</p>
+                  <p className="font-medium">{strand.user.displayName || strand.user.username}</p>
                   <p className="text-gray-400 text-xs">
-                    {formatDateTime(strand.createdAt)}
+                    @{strand.user.username} • {formatDateTime(strand.createdAt)}
                   </p>
                 </div>
               </div>
