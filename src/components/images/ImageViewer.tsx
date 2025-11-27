@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { imageApi, Image, Comment } from '@/lib/api';
@@ -22,6 +22,8 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [deletingComment, setDeletingComment] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -127,6 +129,69 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
     }
   };
 
+  const handleFullscreen = async () => {
+    if (!imageRef.current) return;
+
+    try {
+      if (!isFullscreen) {
+        // Enter fullscreen
+        if (imageRef.current.requestFullscreen) {
+          await imageRef.current.requestFullscreen();
+        } else if ((imageRef.current as any).webkitRequestFullscreen) {
+          // Safari
+          await (imageRef.current as any).webkitRequestFullscreen();
+        } else if ((imageRef.current as any).mozRequestFullScreen) {
+          // Firefox
+          await (imageRef.current as any).mozRequestFullScreen();
+        } else if ((imageRef.current as any).msRequestFullscreen) {
+          // IE/Edge
+          await (imageRef.current as any).msRequestFullscreen();
+        }
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          // Safari
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).mozCancelFullScreen) {
+          // Firefox
+          await (document as any).mozCancelFullScreen();
+        } else if ((document as any).msExitFullscreen) {
+          // IE/Edge
+          await (document as any).msExitFullscreen();
+        }
+      }
+    } catch (error: any) {
+      console.error('Error toggling fullscreen:', error);
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isCurrentlyFullscreen);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex items-center justify-center animate-fade-in">
@@ -183,15 +248,26 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
         <div className="flex-1 text-white text-center font-medium">
           {image.user?.displayName || 'Image'}
         </div>
-        {canDeleteImage && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-red-500 p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50 transition-all duration-200 active:scale-95"
-            title={isAdmin && !isOwner ? "Delete image (Admin)" : "Delete image"}
+            onClick={handleFullscreen}
+            className="text-white p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-200 active:scale-95"
+            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >
-            {deleting ? (
-              <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+            {isFullscreen ? (
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6h12v12"
+                />
+              </svg>
             ) : (
               <svg
                 className="w-6 h-6"
@@ -203,13 +279,39 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
                 />
               </svg>
             )}
           </button>
-        )}
-        {!canDeleteImage && <div className="w-[44px]" />}
+          {canDeleteImage && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-red-500 p-2 hover:bg-white/10 active:bg-white/20 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50 transition-all duration-200 active:scale-95"
+              title={isAdmin && !isOwner ? "Delete image (Admin)" : "Delete image"}
+            >
+              {deleting ? (
+                <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              )}
+            </button>
+          )}
+          {!canDeleteImage && <div className="w-[44px]" />}
+        </div>
       </div>
 
       {/* Scrollable Content Area - Everything scrolls together */}
@@ -219,9 +321,12 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
           <div className="flex-shrink-0 flex items-center justify-center min-h-[40vh] p-4 animate-scale-in">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
+              ref={imageRef}
               src={image.imageUrl}
               alt={image.fileName}
-              className="max-w-full max-h-[70vh] object-contain transition-transform duration-300"
+              className="max-w-full max-h-[70vh] object-contain transition-transform duration-300 cursor-pointer"
+              onClick={handleFullscreen}
+              title="Click to toggle fullscreen"
             />
           </div>
 

@@ -88,6 +88,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subscription is created and sent to server automatically
   - Fails silently if notifications are not supported or permission is denied
   - Users can still manually enable/disable notifications from the profile page
+- **Fullscreen image viewing**
+  - Added fullscreen button to ImageViewer header
+  - Click image or fullscreen button to toggle fullscreen mode
+  - Supports native Fullscreen API with cross-browser compatibility (Chrome, Firefox, Safari, Edge)
+  - Fullscreen state is tracked and button icon updates accordingly
+  - Exit fullscreen via button, ESC key, or clicking the image again
 
 ## [Previous Changes]
 
