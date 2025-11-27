@@ -100,12 +100,15 @@ function InvitePageContent() {
       <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-gray-900">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-100 mb-2">Join Group</h1>
-            <p className="text-lg text-gray-300 mb-2 font-medium">
-              You&apos;ve been invited to join
-            </p>
-            <p className="text-xl font-semibold text-blue-400 mb-4">{groupInfo.groupName}</p>
-            <p className="text-gray-400">Create your account to join</p>
+            <h1 className="text-3xl font-bold text-gray-100 mb-2">Strands</h1>
+            <p className="text-lg text-gray-300 mb-2 font-medium">The first strand type group chat</p>
+            <div className="mt-6 mb-4">
+              <p className="text-lg text-gray-300 mb-2 font-medium">
+                You&apos;ve been invited to join
+              </p>
+              <p className="text-xl font-semibold text-blue-400 mb-4">{groupInfo.groupName}</p>
+              <p className="text-gray-400">Create your account to join</p>
+            </div>
           </div>
 
           <div className="bg-gray-800 rounded-lg shadow-sm p-8 border border-gray-700">
