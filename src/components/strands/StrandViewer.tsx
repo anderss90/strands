@@ -8,6 +8,7 @@ import { Comment } from '@/types/comment';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import LinkText from '@/components/common/LinkText';
 import VideoPlayer from '@/components/media/VideoPlayer';
+import ZoomableImage from '@/components/media/ZoomableImage';
 import { strandApi } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils/dateFormat';
 
@@ -366,20 +367,22 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
         <div className="flex flex-col">
           {/* Image or Video (if present) */}
           {hasImage && strand.image && (
-            <div className="flex-shrink-0 flex items-center justify-center min-h-[40vh] p-4 animate-scale-in">
+            <div className="flex-shrink-0 flex items-center justify-center min-h-[40vh] max-h-[70vh] p-4 animate-scale-in">
               {isVideo ? (
                 <VideoPlayer
                   src={strand.image.imageUrl || strand.image.mediaUrl || ''}
                   poster={strand.image.thumbnailUrl || undefined}
-                  className="max-w-full max-h-[70vh]"
+                  className="max-w-full max-h-full"
                   controls
                 />
               ) : (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
+                <ZoomableImage
                   src={strand.image.imageUrl || strand.image.mediaUrl || ''}
                   alt={strand.image.fileName || 'Strand image'}
-                  className="max-w-full max-h-[70vh] object-contain transition-transform duration-300"
+                  className="w-full h-full"
+                  maxZoom={4}
+                  minZoom={1}
+                  doubleTapZoom={2.5}
                 />
               )}
             </div>

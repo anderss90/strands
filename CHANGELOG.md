@@ -72,6 +72,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Notifications include commenter name and link to the strand
   - Prevents duplicate notifications by excluding already-notified users from group notifications
   - Added `notifyUsers` function to send notifications to specific user IDs
+- **Added zoom functionality for strand images**
+  - Created `ZoomableImage` component with comprehensive zoom and pan support
+  - Pinch-to-zoom on mobile devices (two-finger gesture)
+  - Double-tap/click to zoom in/out
+  - Mouse wheel zoom (Ctrl/Cmd + scroll) on desktop
+  - Drag/pan when zoomed in
+  - Zoom controls (zoom in, zoom out, reset buttons)
+  - Zoom percentage indicator
+  - Maximum zoom of 4x, default double-tap zoom of 2.5x
 
 ## [Previous Changes]
 
