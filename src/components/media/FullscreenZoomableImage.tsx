@@ -26,6 +26,8 @@ export default function FullscreenZoomableImage({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [lastTap, setLastTap] = useState(0);
+  const [mouseDownPos, setMouseDownPos] = useState({ x: 0, y: 0 });
+  const [hasMoved, setHasMoved] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFullscreenSupported, setIsFullscreenSupported] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -191,7 +193,7 @@ export default function FullscreenZoomableImage({
       lastTouchDistanceRef.current = null;
     }
     
-    // Handle double tap
+    // Handle single tap for fullscreen or double tap for zoom
     if (e.touches.length === 0 && e.changedTouches.length === 1) {
       const now = Date.now();
       const tapDelay = now - lastTap;
@@ -199,31 +201,41 @@ export default function FullscreenZoomableImage({
 
       if (tapDelay < 300 && tapDelay > 0) {
         // Double tap detected
-        const touch = e.changedTouches[0];
-        const containerRect = containerRef.current?.getBoundingClientRect();
-        if (containerRect) {
-          const centerX = touch.clientX - containerRect.left;
-          const centerY = touch.clientY - containerRect.top;
-          
-          if (scale > minZoom) {
-            // Zoom out
-            setScale(minZoom);
-            setPosition({ x: 0, y: 0 });
-          } else {
-            // Zoom in
-            const newScale = Math.min(maxZoom, doubleTapZoom);
-            setScale(newScale);
-            setPosition({
-              x: centerX - (centerX - position.x) * (newScale / scale),
-              y: centerY - (centerY - position.y) * (newScale / scale),
-            });
+        if (isFullscreen) {
+          // In fullscreen: toggle zoom
+          const touch = e.changedTouches[0];
+          const containerRect = containerRef.current?.getBoundingClientRect();
+          if (containerRect) {
+            const centerX = touch.clientX - containerRect.left;
+            const centerY = touch.clientY - containerRect.top;
+            
+            if (scale > minZoom) {
+              // Zoom out
+              setScale(minZoom);
+              setPosition({ x: 0, y: 0 });
+            } else {
+              // Zoom in
+              const newScale = Math.min(maxZoom, doubleTapZoom);
+              setScale(newScale);
+              setPosition({
+                x: centerX - (centerX - position.x) * (newScale / scale),
+                y: centerY - (centerY - position.y) * (newScale / scale),
+              });
+            }
           }
+        }
+      } else if (tapDelay >= 300 || tapDelay === 0) {
+        // Single tap - enter fullscreen if not already in fullscreen and not zoomed
+        if (!isFullscreen && scale === 1 && !isDragging) {
+          handleFullscreen();
         }
       }
     }
   };
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    setMouseDownPos({ x: e.clientX, y: e.clientY });
+    setHasMoved(false);
     if (scale > 1) {
       setIsDragging(true);
       setDragStart({
@@ -234,6 +246,14 @@ export default function FullscreenZoomableImage({
   };
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    // Check if mouse has moved significantly (more than 5px)
+    const moveDistance = Math.sqrt(
+      Math.pow(e.clientX - mouseDownPos.x, 2) + Math.pow(e.clientY - mouseDownPos.y, 2)
+    );
+    if (moveDistance > 5) {
+      setHasMoved(true);
+    }
+    
     if (isDragging && scale > 1) {
       setPosition({
         x: e.clientX - dragStart.x,
@@ -244,6 +264,10 @@ export default function FullscreenZoomableImage({
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    // Reset hasMoved after a short delay to allow click event to fire
+    setTimeout(() => {
+      setHasMoved(false);
+    }, 100);
   };
 
   const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
@@ -268,11 +292,20 @@ export default function FullscreenZoomableImage({
     }
   };
 
-  const handleDoubleClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (!isFullscreen) {
-      // Enter fullscreen on double click
+  const handleClick = (e: MouseEvent<HTMLDivElement>) => {
+    // Only trigger fullscreen on single click if:
+    // - Not in fullscreen already
+    // - Not zoomed
+    // - Mouse hasn't moved (wasn't a drag)
+    // - Not currently dragging
+    if (!isFullscreen && scale === 1 && !hasMoved && !isDragging) {
+      e.stopPropagation();
       handleFullscreen();
-    } else {
+    }
+  };
+
+  const handleDoubleClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (isFullscreen) {
       // Toggle zoom when in fullscreen
       const containerRect = containerRef.current?.getBoundingClientRect();
       if (containerRect) {
@@ -341,6 +374,7 @@ export default function FullscreenZoomableImage({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
+      onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       style={{ 
         cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer',

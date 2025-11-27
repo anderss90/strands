@@ -91,13 +91,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unified fullscreen and zoom image viewer**
   - Created `FullscreenZoomableImage` component combining fullscreen and zoom functionality
   - Replaced separate zoom and fullscreen implementations with unified solution
-  - Fullscreen mode: Double-click image or click fullscreen button to enter fullscreen
+  - Fullscreen mode: Single-click/tap image or click fullscreen button to enter fullscreen
   - Zoom in fullscreen: Pinch-to-zoom (mobile), Ctrl/Cmd+scroll (desktop), or double-click
   - Pan when zoomed: Drag to move around zoomed image
   - Zoom controls: Zoom in/out/reset buttons appear in fullscreen mode
   - Exit fullscreen: Click exit button, press ESC, or double-click again
   - Used in both ImageViewer and StrandViewer for consistent experience
   - Cross-browser fullscreen support (Chrome, Firefox, Safari, Edge)
+  - Smart click detection: Prevents accidental fullscreen when dragging or panning
 
 ## [Previous Changes]
 
