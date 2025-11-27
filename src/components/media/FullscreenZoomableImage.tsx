@@ -435,31 +435,32 @@ export default function FullscreenZoomableImage({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
               </svg>
             </button>
-            {scale > minZoom && (
-              <button
-                onClick={handleReset}
-                className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200"
-                title="Reset zoom"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-            )}
             <button
-              onClick={handleFullscreen}
-              className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200"
-              title="Exit fullscreen"
+              onClick={handleReset}
+              disabled={scale <= minZoom}
+              className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Reset zoom"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6h12v12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
           </div>
           
+          {/* Exit fullscreen button - top right */}
+          <button
+            onClick={handleFullscreen}
+            className="absolute top-4 right-4 bg-black/70 text-white p-3 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 z-10"
+            title="Exit fullscreen"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
           {/* Zoom indicator */}
           {scale > minZoom && (
-            <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs z-10">
+            <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs z-10">
               {Math.round(scale * 100)}%
             </div>
           )}
