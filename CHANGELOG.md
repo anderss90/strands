@@ -95,7 +95,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Zoom in fullscreen: Pinch-to-zoom (mobile), Ctrl/Cmd+scroll (desktop), or double-click
   - Pan when zoomed: Drag to move around zoomed image
   - Zoom controls: Zoom in/out/reset buttons appear in fullscreen mode
-  - Exit fullscreen: Click exit button, press ESC, or double-click again
+  - Reset zoom button always visible in fullscreen (disabled when at minimum zoom)
+  - Exit fullscreen: Click clear X icon button in top-right, press ESC, or double-click again
   - Used in both ImageViewer and StrandViewer for consistent experience
   - Cross-browser fullscreen support (Chrome, Firefox, Safari, Edge)
   - Smart click detection: Prevents accidental fullscreen when dragging or panning
