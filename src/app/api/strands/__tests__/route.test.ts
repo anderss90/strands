@@ -125,7 +125,7 @@ describe('/api/strands', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.message).toContain('Either content or image');
+      expect(data.message).toContain('Either content or media files');
     });
   });
 });

@@ -16,11 +16,17 @@ interface StrandCreateProps {
   sharedImage?: File | null;
 }
 
+interface FileWithPreview {
+  file: File;
+  fileData: { blob: Blob; name: string; type: string };
+  preview: string;
+  isVideo: boolean;
+  videoMetadata?: { duration?: number; width?: number; height?: number };
+}
+
 export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImage }: StrandCreateProps) {
   const [content, setContent] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [fileData, setFileData] = useState<{ blob: Blob; name: string; type: string } | null>(null); // Store file data to persist on iOS
-  const [preview, setPreview] = useState<string | null>(null);
+  const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,8 +35,6 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
   const [uploading, setUploading] = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [isVideo, setIsVideo] = useState(false);
-  const [videoMetadata, setVideoMetadata] = useState<{ duration?: number; width?: number; height?: number } | null>(null);
   const photoCameraInputRef = useRef<HTMLInputElement>(null);
   const videoCameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -56,122 +60,24 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
 
   // Process shared image when provided
   useEffect(() => {
-    if (sharedImage && !file && !fileData) {
+    if (sharedImage && files.length === 0) {
       const processSharedImage = async () => {
         try {
           setCompressing(true);
           setError('');
-
-          // Validate file type
-          if (!isValidMedia(sharedImage)) {
-            setError('Invalid file type. Only images (JPEG, PNG, GIF, WebP) and videos (MP4, MOV, AVI, WebM) are allowed.');
-            return;
+          const processed = await processFile(sharedImage);
+          if (processed) {
+            setFiles([processed]);
+            setError('');
           }
-
-          // Get media type
-          const sharedMediaType = getMediaType(sharedImage);
-          if (!sharedMediaType) {
-            setError('Unable to determine file type.');
-            return;
+        } catch (error) {
+          console.error('Error processing shared image:', error);
+          setError('Failed to process shared image. Please try again.');
+          try {
+            sessionStorage.removeItem('sharedImage');
+          } catch (e) {
+            // Ignore storage errors
           }
-
-          const isValidVideo = sharedMediaType === 'video';
-          setIsVideo(isValidVideo);
-
-          // Validate file size
-          const sizeValidation = validateFileSize(sharedImage, sharedMediaType);
-          if (!sizeValidation.valid) {
-            setError(sizeValidation.error || 'File size exceeds maximum allowed size.');
-            return;
-          }
-
-          // For videos, get metadata
-          if (isValidVideo) {
-            try {
-              const metadata = await getVideoMetadata(sharedImage);
-              setVideoMetadata(metadata);
-            } catch (err) {
-              console.warn('Failed to get video metadata:', err);
-            }
-          }
-
-          // Compress image if needed (only for images, not videos)
-          let processedFile = sharedImage;
-          if (sharedMediaType === 'image' && needsCompression(sharedImage)) {
-            console.log('Image exceeds size limit, compressing...');
-            processedFile = await compressImage(sharedImage);
-          }
-
-          // Read file into memory to persist it
-          const arrayBuffer = await processedFile.arrayBuffer();
-          const sharedFileExtension = sharedImage.name.split('.').pop()?.toLowerCase() || '';
-          const blob = new Blob([arrayBuffer], { type: processedFile.type || (sharedMediaType === 'video' ? `video/${sharedFileExtension}` : `image/${sharedFileExtension}`) });
-          
-          // Determine MIME type (normalize if missing)
-          let normalizedMimeType = processedFile.type;
-          if (!normalizedMimeType) {
-            const extensionToMime: Record<string, string> = {
-              'jpg': 'image/jpeg',
-              'jpeg': 'image/jpeg',
-              'png': 'image/png',
-              'gif': 'image/gif',
-              'webp': 'image/webp',
-              'mp4': 'video/mp4',
-              'mov': 'video/quicktime',
-              'avi': 'video/x-msvideo',
-            };
-            normalizedMimeType = extensionToMime[sharedFileExtension] || (sharedMediaType === 'video' ? 'video/mp4' : 'image/jpeg');
-          }
-
-          // Store file data for persistence
-          setFileData({
-            blob: blob,
-            name: processedFile.name,
-            type: normalizedMimeType,
-          });
-          
-          // Keep the processed File object
-          setFile(processedFile);
-          setError('');
-
-          // Create preview from the blob
-          // For videos, create object URL; for images, use data URL
-          if (sharedMediaType === 'video') {
-            // For videos, use object URL for preview
-            const videoUrl = URL.createObjectURL(blob);
-            setPreview(videoUrl);
-          } else {
-            // For images, use FileReader to create data URL
-            const reader = new FileReader();
-            
-            reader.onloadend = () => {
-              if (reader.result) {
-                setPreview(reader.result as string);
-              } else {
-                console.error('FileReader: No result');
-                setError('Failed to generate preview. Please try again.');
-                setFile(null);
-                setFileData(null);
-                setPreview(null);
-              }
-            };
-            
-            reader.onerror = () => {
-              console.error('FileReader error:', reader.error);
-              setError('Failed to read file for preview. Please try again.');
-              setFile(null);
-              setFileData(null);
-              setPreview(null);
-            };
-            
-            reader.readAsDataURL(blob);
-          }
-        } catch (err: any) {
-          setError(err.message || 'Failed to process shared image. Please try again.');
-          console.error('Error processing shared image:', err);
-          setFile(null);
-          setFileData(null);
-          setPreview(null);
         } finally {
           setCompressing(false);
         }
@@ -195,48 +101,42 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     }
   };
 
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
-
+  const processFile = async (selectedFile: File): Promise<FileWithPreview | null> => {
     // Validate file type
     if (!isValidMedia(selectedFile)) {
       setError('Invalid file type. Only images (JPEG, PNG, GIF, WebP) and videos (MP4, MOV, AVI, WebM) are allowed.');
-      return;
+      return null;
     }
 
     // Get media type
     const mediaType = getMediaType(selectedFile);
     if (!mediaType) {
       setError('Unable to determine file type.');
-      return;
+      return null;
     }
 
     const isValidVideo = mediaType === 'video';
-    setIsVideo(isValidVideo);
 
     // Validate file size
     const sizeValidation = validateFileSize(selectedFile, mediaType);
     if (!sizeValidation.valid) {
       setError(sizeValidation.error || 'File size exceeds maximum allowed size.');
-      return;
+      return null;
     }
 
     try {
-      setCompressing(true);
-      setError('');
+      let videoMetadata: { duration?: number; width?: number; height?: number } | undefined;
 
       // For videos, get metadata and validate size
       if (mediaType === 'video') {
         const videoSizeValidation = validateVideoSize(selectedFile, MAX_VIDEO_SIZE);
         if (!videoSizeValidation.valid) {
           setError(videoSizeValidation.error || 'Video size exceeds maximum allowed size.');
-          return;
+          return null;
         }
 
         try {
-          const metadata = await getVideoMetadata(selectedFile);
-          setVideoMetadata(metadata);
+          videoMetadata = await getVideoMetadata(selectedFile);
         } catch (err) {
           console.warn('Failed to get video metadata:', err);
           // Continue without metadata
@@ -272,67 +172,90 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         normalizedMimeType = extensionToMime[currentFileExtension] || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg');
       }
 
-      // Store file data for persistence
-      setFileData({
-        blob: blob,
-        name: processedFile.name,
-        type: normalizedMimeType,
-      });
-      
-      // Keep the processed File object
-      setFile(processedFile);
-      setError('');
-
       // Create preview from the blob
-      // For videos, create object URL; for images, use data URL
+      let preview: string;
       if (mediaType === 'video') {
         // For videos, use object URL for preview
-        const videoUrl = URL.createObjectURL(blob);
-        setPreview(videoUrl);
+        preview = URL.createObjectURL(blob);
       } else {
         // For images, use FileReader to create data URL
-        const reader = new FileReader();
-        
-        reader.onloadend = () => {
-          if (reader.result) {
-            setPreview(reader.result as string);
-          } else {
-            console.error('FileReader: No result');
-            setError('Failed to generate preview. Please try again.');
-            setFile(null);
-            setFileData(null);
-            setPreview(null);
-          }
-        };
-        
-        reader.onerror = () => {
-          console.error('FileReader error:', reader.error);
-          setError('Failed to read file for preview. Please try again.');
-          setFile(null);
-          setFileData(null);
-          setPreview(null);
-        };
-        
-        reader.readAsDataURL(blob);
+        preview = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (reader.result) {
+              resolve(reader.result as string);
+            } else {
+              reject(new Error('FileReader: No result'));
+            }
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
       }
+
+      return {
+        file: processedFile,
+        fileData: {
+          blob: blob,
+          name: processedFile.name,
+          type: normalizedMimeType,
+        },
+        preview,
+        isVideo: isValidVideo,
+        videoMetadata,
+      };
     } catch (err: any) {
-      setError(err.message || 'Failed to process image. Please try again.');
       console.error('Error processing file:', err);
-      setFile(null);
-      setFileData(null);
-      setPreview(null);
-      if (photoCameraInputRef.current) {
-        photoCameraInputRef.current.value = '';
-      }
-      if (videoCameraInputRef.current) {
-        videoCameraInputRef.current.value = '';
-      }
-      if (galleryInputRef.current) {
-        galleryInputRef.current.value = '';
-      }
-    } finally {
-      setCompressing(false);
+      setError(err.message || 'Failed to process file. Please try again.');
+      return null;
     }
+  };
+
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length === 0) return;
+
+    setCompressing(true);
+    setError('');
+
+    const processedFiles: FileWithPreview[] = [];
+    
+    for (const selectedFile of selectedFiles) {
+      const processed = await processFile(selectedFile);
+      if (processed) {
+        processedFiles.push(processed);
+      } else {
+        // If one file fails, stop processing
+        break;
+      }
+    }
+
+    if (processedFiles.length > 0) {
+      setFiles(prev => [...prev, ...processedFiles]);
+      setError('');
+    }
+
+    // Clear input
+    if (photoCameraInputRef.current) {
+      photoCameraInputRef.current.value = '';
+    }
+    if (videoCameraInputRef.current) {
+      videoCameraInputRef.current.value = '';
+    }
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = '';
+    }
+
+    setCompressing(false);
+  };
+
+  const removeFile = (index: number) => {
+    const fileToRemove = files[index];
+    // Revoke object URL if it's a video
+    if (fileToRemove.isVideo && fileToRemove.preview.startsWith('blob:')) {
+      URL.revokeObjectURL(fileToRemove.preview);
+    }
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handlePhotoCameraClick = () => {
@@ -371,9 +294,9 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     e.preventDefault();
     setError('');
 
-    // Validate: at least content or file must be provided
-    if (!content.trim() && !file && !fileData) {
-      setError('Please provide either text content or a media file (or both)');
+    // Validate: at least content or files must be provided
+    if (!content.trim() && files.length === 0) {
+      setError('Please provide either text content or media files (or both)');
       return;
     }
 
@@ -405,117 +328,25 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         throw new Error('Not authenticated');
       }
 
-      // Use stored file data if available (persists on iOS), otherwise use file
-      let fileToUpload: File | null = null;
-      if (fileData) {
+      // Prepare files for upload - use fileData if available (persists on iOS), otherwise use file
+      const filesToUpload: File[] = files.map(f => {
         // Create a new File from the stored blob to ensure it's valid
-        fileToUpload = new File([fileData.blob], fileData.name, { type: fileData.type });
-      } else if (file) {
-        fileToUpload = file;
-      }
+        return new File([f.fileData.blob], f.fileData.name, { type: f.fileData.type });
+      });
 
-      let mediaId: string | null = null;
-
-      // Determine if we should use direct upload (videos or files > 4MB)
-      if (fileToUpload && shouldUseDirectUpload(fileToUpload)) {
-        // Use direct upload to Supabase Storage
-        if (!user?.id) {
-          throw new Error('User ID not available');
-        }
-
-        setUploadProgress(10);
-        
-        // Upload directly to Supabase Storage
-        const uploadResult = await directUploadToSupabase({
-          file: fileToUpload,
-          userId: user.id,
-          onProgress: (progress) => {
-            // Map upload progress (0-90% for upload, 90-100% for metadata)
-            setUploadProgress(Math.min(90, progress.percentage * 0.9));
-          },
-        });
-
-        setUploadProgress(50);
-
-        // Get video metadata and generate thumbnail if it's a video
-        let videoMeta = null;
-        let thumbnailUrl: string | null = null;
-        
-        if (isVideo && fileToUpload) {
-          try {
-            videoMeta = await getVideoMetadata(fileToUpload);
-            setUploadProgress(60);
-            
-            // Generate thumbnail
-            try {
-              const thumbnailBlob = await generateVideoThumbnail(fileToUpload);
-              setUploadProgress(70);
-              
-              // Upload thumbnail to Supabase Storage
-              const thumbnailFile = new File([thumbnailBlob], `thumbnail_${fileToUpload.name.replace(/\.[^/.]+$/, '')}.jpg`, {
-                type: 'image/jpeg',
-              });
-              
-              const thumbnailUploadResult = await directUploadToSupabase({
-                file: thumbnailFile,
-                userId: user.id,
-                onProgress: (progress) => {
-                  // Map thumbnail upload progress (70-90%)
-                  setUploadProgress(70 + (progress.percentage * 0.2));
-                },
-              });
-              
-              thumbnailUrl = thumbnailUploadResult.publicUrl;
-              setUploadProgress(90);
-            } catch (err) {
-              console.warn('Failed to generate video thumbnail:', err);
-              // Continue without thumbnail
-            }
-          } catch (err) {
-            console.warn('Failed to get video metadata:', err);
-          }
-        } else {
-          setUploadProgress(90);
-        }
-
-        // Save metadata via API
-        const mediaResponse = await fetch('/api/media', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            mediaUrl: uploadResult.publicUrl,
-            thumbnailUrl: thumbnailUrl || (isVideo ? undefined : uploadResult.publicUrl),
-            fileName: fileToUpload.name,
-            fileSize: fileToUpload.size,
-            mimeType: fileToUpload.type || fileData?.type || 'application/octet-stream',
-            mediaType: isVideo ? 'video' : 'image',
-            duration: videoMeta?.duration,
-            width: videoMeta?.width,
-            height: videoMeta?.height,
-            groupIds: selectedGroupIds,
-          }),
-        });
-
-        if (!mediaResponse.ok) {
-          const errorData = await mediaResponse.json().catch(() => ({ message: 'Failed to save media metadata' }));
-          throw new Error(errorData.message || 'Failed to save media metadata');
-        }
-
-        const mediaData = await mediaResponse.json();
-        mediaId = mediaData.id;
-        setUploadProgress(100);
-      } else if (fileToUpload) {
-        // Use traditional server-side upload for small images
+      // Upload all files using traditional server-side upload
+      if (filesToUpload.length > 0) {
         const formData = new FormData();
         
         if (content.trim()) {
           formData.append('content', content.trim());
         }
         
-        formData.append('file', fileToUpload);
+        // Append all files
+        filesToUpload.forEach(file => {
+          formData.append('files', file);
+        });
+        
         formData.append('groupIds', JSON.stringify(selectedGroupIds));
 
         // Use fetchWithRetry for better network error handling
@@ -534,7 +365,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
           // Handle 413 Payload Too Large specifically
           if (response.status === 413) {
             const errorData = await response.json().catch(() => ({ 
-              message: 'File size exceeds maximum allowed size of 4MB. Please choose a smaller file or compress it.' 
+              message: 'File size exceeds maximum allowed size of 4MB. Please choose smaller files or compress them.' 
             }));
             throw new Error(errorData.message || 'File size exceeds maximum allowed size of 4MB.');
           }
@@ -546,13 +377,26 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         const strandData = await response.json();
         // Reset form and return success
         setContent('');
-        setFile(null);
-        setFileData(null);
-        setPreview(null);
+        setFiles([]);
         setSelectedGroupIds([]);
         setUploadProgress(0);
-        setIsVideo(false);
-        setVideoMetadata(null);
+        
+        // Clean up object URLs for videos
+        files.forEach(f => {
+          if (f.isVideo && f.preview.startsWith('blob:')) {
+            URL.revokeObjectURL(f.preview);
+          }
+        });
+        
+        if (photoCameraInputRef.current) {
+          photoCameraInputRef.current.value = '';
+        }
+        if (videoCameraInputRef.current) {
+          videoCameraInputRef.current.value = '';
+        }
+        if (galleryInputRef.current) {
+          galleryInputRef.current.value = '';
+        }
         
         if (onSuccess) {
           onSuccess();
@@ -561,30 +405,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
           router.push('/home');
         }
         return;
-      }
-
-      // If we used direct upload, create strand with media ID
-      if (mediaId) {
-        const response = await fetch('/api/strands', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            content: content.trim() || undefined,
-            imageId: mediaId, // API expects imageId but it works for both images and videos
-            groupIds: selectedGroupIds,
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: 'Failed to create strand' }));
-          throw new Error(errorData.message || 'Failed to create strand');
-        }
-
-        setUploadProgress(100);
-      } else if (!fileToUpload && content.trim()) {
+      } else if (content.trim()) {
         // Text-only strand
         const response = await fetch('/api/strands', {
           method: 'POST',
@@ -602,38 +423,20 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
           const errorData = await response.json().catch(() => ({ message: 'Failed to create strand' }));
           throw new Error(errorData.message || 'Failed to create strand');
         }
-      }
 
-      // Reset form
-      setContent('');
-      setFile(null);
-      setFileData(null);
-      setPreview(null);
-      setSelectedGroupIds([]);
-      setUploadProgress(0);
-      setIsVideo(false);
-      setVideoMetadata(null);
-      
-      // Clean up object URL if it was a video
-      if (preview && preview.startsWith('blob:')) {
-        URL.revokeObjectURL(preview);
-      }
-      
-      if (photoCameraInputRef.current) {
-        photoCameraInputRef.current.value = '';
-      }
-      if (videoCameraInputRef.current) {
-        videoCameraInputRef.current.value = '';
-      }
-      if (galleryInputRef.current) {
-        galleryInputRef.current.value = '';
-      }
-      
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        alert('Strand created successfully!');
-        router.push('/home');
+        // Reset form
+        setContent('');
+        setFiles([]);
+        setSelectedGroupIds([]);
+        setUploadProgress(0);
+        
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          alert('Strand created successfully!');
+          router.push('/home');
+        }
+        return;
       }
     } catch (err: any) {
       const errorMessage = isNetworkError(err) ? getErrorMessage(err) : (err.message || 'Failed to create strand');
@@ -670,12 +473,13 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         className="hidden"
         capture="environment"
       />
-      {/* Gallery input - opens gallery/file picker */}
+      {/* Gallery input - opens gallery/file picker - supports multiple files */}
       <input
         ref={galleryInputRef}
         type="file"
-        accept=""
+        accept="image/*,video/*"
         onChange={handleFileChange}
+        multiple
         className="hidden"
       />
 
@@ -700,18 +504,18 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
       {/* Image Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">
-          Image (optional)
+          Media (optional) {files.length > 0 && `(${files.length} selected)`}
         </label>
         {compressing && (
           <div className="mb-3 p-3 bg-blue-900/20 border border-blue-700 text-blue-400 rounded-lg text-sm flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-            {isVideo ? 'Processing video...' : 'Compressing image to reduce file size...'}
+            {files.some(f => f.isVideo) ? 'Processing media...' : 'Compressing images to reduce file size...'}
           </div>
         )}
         {uploading && uploadProgress > 0 && (
           <div className="mb-3 p-3 bg-blue-900/20 border border-blue-700 text-blue-400 rounded-lg text-sm">
             <div className="flex items-center justify-between mb-2">
-              <span>Uploading {isVideo ? 'video' : 'file'}...</span>
+              <span>Uploading {files.some(f => f.isVideo) ? 'media' : 'files'}...</span>
               <span>{Math.round(uploadProgress)}%</span>
             </div>
             <div className="w-full bg-gray-700 rounded-full h-2">
@@ -722,7 +526,8 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
             </div>
           </div>
         )}
-        {!preview ? (
+        
+        {files.length === 0 ? (
           <div className="grid grid-cols-3 gap-3">
             <button
               type="button"
@@ -793,54 +598,52 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
             </button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <div className="relative rounded-lg overflow-hidden border border-gray-600">
-              {isVideo ? (
-                <video
-                  src={preview || undefined}
-                  controls
-                  className="w-full h-auto max-h-96 object-contain"
-                  playsInline
-                />
-              ) : (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={preview || undefined}
-                  alt="Preview"
-                  className="w-full h-auto max-h-96 object-contain"
-                />
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setFile(null);
-                  setPreview(null);
-                  if (photoCameraInputRef.current) {
-                    photoCameraInputRef.current.value = '';
-                  }
-                  if (videoCameraInputRef.current) {
-                    videoCameraInputRef.current.value = '';
-                  }
-                  if (galleryInputRef.current) {
-                    galleryInputRef.current.value = '';
-                  }
-                }}
-                className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 active:scale-95 transition-all duration-200"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+          <div className="space-y-3">
+            {/* File Previews */}
+            <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
+              {files.map((fileWithPreview, index) => (
+                <div key={index} className="relative rounded-lg overflow-hidden border border-gray-600">
+                  {fileWithPreview.isVideo ? (
+                    <video
+                      src={fileWithPreview.preview}
+                      className="w-full h-32 object-cover"
+                      playsInline
+                      muted
+                    />
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={fileWithPreview.preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 active:scale-95 transition-all duration-200"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                  {fileWithPreview.isVideo && (
+                    <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1 rounded">
+                      🎥
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -848,7 +651,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                 onClick={handlePhotoCameraClick}
                 className="bg-gray-700 text-gray-100 py-3 px-4 rounded-lg font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[48px] active:scale-95 transition-all duration-200"
               >
-                📷 Take New
+                📷 Add Photo
               </button>
               <button
                 type="button"
@@ -856,7 +659,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                 disabled={checkingPermissions}
                 className="bg-gray-700 text-gray-100 py-3 px-4 rounded-lg font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[48px] active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                🖼️ Choose Different
+                🖼️ Add More
               </button>
             </div>
           </div>
@@ -905,7 +708,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
 
       <button
         type="submit"
-        disabled={uploading || compressing || (!content.trim() && !file && !fileData) || selectedGroupIds.length === 0}
+        disabled={uploading || compressing || (!content.trim() && files.length === 0) || selectedGroupIds.length === 0}
         className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-base min-h-[48px] transition-all duration-200 shadow-md hover:shadow-lg"
       >
         {uploading ? (

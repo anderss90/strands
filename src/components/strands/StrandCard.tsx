@@ -12,9 +12,10 @@ interface StrandCardProps {
 }
 
 export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCardProps) {
-  const hasImage = !!strand.imageId && strand.image;
-  const hasText = !!strand.content;
-  const isVideo = strand.image?.mediaType === 'video' || strand.image?.mimeType?.startsWith('video/');
+  const hasImage = !!strand.imageId && strand.image; // For backward compatibility
+  const hasMultipleImages = strand.images && strand.images.length > 0;
+  const displayImages = hasMultipleImages ? strand.images.slice(0, 2) : (hasImage ? [{ image: strand.image!, displayOrder: 0 }] : []);
+  const hasMoreImages = hasMultipleImages && strand.images!.length > 2;
   const [localFireCount, setLocalFireCount] = useState(strand.fireCount || 0);
   const [localHasUserFired, setLocalHasUserFired] = useState(strand.hasUserFired || false);
   const [firing, setFiring] = useState(false);
@@ -126,64 +127,78 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
         </div>
       </div>
 
-      {/* Second: Strand image/video */}
-      {hasImage && strand.image && (
-        <div className="relative aspect-square bg-gray-700 overflow-hidden">
-          {isVideo ? (
-            strand.image.thumbnailUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={strand.image.thumbnailUrl}
-                alt=""
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            ) : (
-              <video
-                ref={videoRef}
-                src={strand.image.mediaUrl || strand.image.imageUrl || ''}
-                className="w-full h-full object-cover"
-                preload="metadata"
-                playsInline
-                muted
-                onLoadedMetadata={(e) => {
-                  // Seek to first frame to show as thumbnail if no thumbnail URL
-                  const video = e.currentTarget;
-                  if (video.duration) {
-                    video.currentTime = Math.min(0.1, video.duration / 10);
-                  }
-                }}
-                onSeeked={(e) => {
-                  // Pause after seeking to show the frame
-                  e.currentTarget.pause();
-                }}
-              />
-            )
-          ) : (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={strand.image.thumbnailUrl || strand.image.imageUrl || strand.image.mediaUrl || ''}
-              alt={strand.image.fileName || 'Strand image'}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          )}
-          {isVideo && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
-              <div className="bg-black/60 rounded-full p-3">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
+      {/* Second: Strand image/video(s) */}
+      {displayImages.length > 0 && (
+        <div className={`relative bg-gray-700 overflow-hidden ${hasMultipleImages ? 'grid grid-cols-2 gap-0.5' : 'aspect-square'}`}>
+          {displayImages.map((mediaEntry, index) => {
+            const media = mediaEntry.image;
+            const isVideo = media.mediaType === 'video' || media.mimeType?.startsWith('video/');
+            const isLast = index === displayImages.length - 1;
+            const showMoreBadge = isLast && hasMoreImages;
+            
+            return (
+              <div key={media.id || index} className="relative aspect-square bg-gray-800">
+                {isVideo ? (
+                  media.thumbnailUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={media.thumbnailUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <video
+                      ref={index === 0 ? videoRef : undefined}
+                      src={media.mediaUrl || media.imageUrl || ''}
+                      className="w-full h-full object-cover"
+                      preload="metadata"
+                      playsInline
+                      muted
+                      onLoadedMetadata={(e) => {
+                        const video = e.currentTarget;
+                        if (video.duration) {
+                          video.currentTime = Math.min(0.1, video.duration / 10);
+                        }
+                      }}
+                      onSeeked={(e) => {
+                        e.currentTarget.pause();
+                      }}
+                    />
+                  )
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={media.thumbnailUrl || media.imageUrl || media.mediaUrl || ''}
+                    alt={media.fileName || `Strand image ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                )}
+                {showMoreBadge && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <span className="text-white text-2xl font-bold">+{strand.images!.length - 2}</span>
+                  </div>
+                )}
+                {isVideo && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+                    <div className="bg-black/60 rounded-full p-3">
+                      <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                    {media.duration && (
+                      <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                        {Math.floor(media.duration / 60)}:{(media.duration % 60).toString().padStart(2, '0')}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              {strand.image.duration && (
-                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                  {Math.floor(strand.image.duration / 60)}:{(strand.image.duration % 60).toString().padStart(2, '0')}
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })}
           {strand.isPinned && (
-            <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+            <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 z-10">
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" />
               </svg>

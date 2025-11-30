@@ -125,7 +125,35 @@ export async function GET(request: NextRequest) {
             WHERE sgs.strand_id = s.id
           ),
           '[]'::json
-        ) as groups
+        ) as groups,
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', sm.id,
+                'imageId', sm.image_id,
+                'displayOrder', sm.display_order,
+                'image', json_build_object(
+                  'id', im.id,
+                  'imageUrl', im.image_url,
+                  'mediaUrl', COALESCE(im.media_url, im.image_url),
+                  'thumbnailUrl', im.thumbnail_url,
+                  'fileName', im.file_name,
+                  'fileSize', im.file_size,
+                  'mimeType', im.mime_type,
+                  'mediaType', COALESCE(im.media_type, CASE WHEN im.mime_type LIKE 'video/%' THEN 'video' ELSE 'image' END),
+                  'duration', im.duration,
+                  'width', im.width,
+                  'height', im.height
+                )
+              ) ORDER BY sm.display_order
+            )
+            FROM strand_media sm
+            INNER JOIN images im ON sm.image_id = im.id
+            WHERE sm.strand_id = s.id
+          ),
+          '[]'::json
+        ) as images
       FROM strands s
       INNER JOIN users u ON s.user_id = u.id
       LEFT JOIN images i ON s.image_id = i.id
@@ -163,6 +191,7 @@ export async function GET(request: NextRequest) {
         width: row.width,
         height: row.height,
       } : null,
+      images: row.images && Array.isArray(row.images) && row.images.length > 0 ? row.images : undefined,
       groups: row.groups || [],
     }));
 
@@ -207,6 +236,8 @@ export async function POST(request: NextRequest) {
     let file: File | null = null;
     let imageId: string | null = null;
     let groupIds: string[] = [];
+    let allFiles: File[] = [];
+    let formData: FormData | null = null;
 
     if (contentType.includes('application/json')) {
       // Handle JSON request (for direct uploads)
@@ -224,15 +255,28 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Handle FormData request (traditional upload)
-      const formData = await request.formData();
+      formData = await request.formData();
       content = formData.get('content') as string | null;
-      file = formData.get('file') as File | null;
+      
+      // Support both single file and multiple files
+      const singleFile = formData.get('file') as File | null;
+      const files = formData.getAll('files') as File[];
+      
+      // Combine single file (for backward compatibility) and multiple files
+      if (singleFile && singleFile instanceof File) {
+        allFiles.push(singleFile);
+      }
+      allFiles.push(...files.filter(f => f instanceof File && f.size > 0));
+      
+      // Use first file for backward compatibility, but we'll process all files
+      file = allFiles.length > 0 ? allFiles[0] : null;
+      
       const groupIdsJson = formData.get('groupIds') as string | null;
 
-      // Validate: at least content or file must be provided
-      if (!content?.trim() && !file) {
+      // Validate: at least content or files must be provided
+      if (!content?.trim() && allFiles.length === 0) {
         return NextResponse.json(
-          { message: 'Either content or image (or both) is required' },
+          { message: 'Either content or media files (or both) is required' },
           { status: 400 }
         );
       }
@@ -303,91 +347,115 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Process multiple files if provided
+    const imageIds: string[] = [];
+    
     // If imageId is provided (from direct upload), use it
-    // Otherwise, upload file if provided
-    if (!imageId && file) {
-      // Validate file type
-      // On iOS, file.type can be empty, so we also check the file extension
-      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-      const hasValidMimeType = file.type && ALLOWED_MIME_TYPES.includes(file.type);
-      const hasValidExtension = allowedExtensions.includes(fileExtension);
-      
-      if (!hasValidMimeType && !hasValidExtension) {
-        return NextResponse.json(
-          { message: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.' },
-          { status: 400 }
-        );
-      }
-      
-      // Normalize MIME type if it's missing but extension is valid
-      let normalizedMimeType = file.type;
-      if (!normalizedMimeType && hasValidExtension) {
-        const extensionToMime: Record<string, string> = {
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'png': 'image/png',
-          'gif': 'image/gif',
-          'webp': 'image/webp',
-        };
-        normalizedMimeType = extensionToMime[fileExtension] || 'image/jpeg';
-      }
-
-      // Validate file size
-      if (file.size > MAX_FILE_SIZE) {
-        return NextResponse.json(
-          { message: `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB` },
-          { status: 413 }
-        );
-      }
-
-      // Generate unique filename
-      const finalFileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `${randomUUID()}.${finalFileExtension}`;
-      const fileBuffer = Buffer.from(await file.arrayBuffer());
-
-      // Upload to Supabase Storage
+    if (imageId) {
+      imageIds.push(imageId);
+    }
+    
+    // Upload all files and collect image IDs
+    if (allFiles.length > 0) {
       const supabase = createServerSupabase();
       const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'images';
+      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'webm'];
+      const allowedVideoExtensions = ['mp4', 'mov', 'avi', 'webm'];
+      const allowedVideoMimeTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(storageBucket)
-        .upload(fileName, fileBuffer, {
-          contentType: normalizedMimeType,
-          upsert: false,
-        });
+      for (let i = 0; i < allFiles.length; i++) {
+        const currentFile = allFiles[i];
+        
+        // Validate file type
+        // On iOS, file.type can be empty, so we also check the file extension
+        const fileExtension = currentFile.name.split('.').pop()?.toLowerCase() || '';
+        const isVideo = allowedVideoExtensions.includes(fileExtension) || 
+                       (currentFile.type && allowedVideoMimeTypes.includes(currentFile.type));
+        const isImage = !isVideo && (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension) ||
+                       (currentFile.type && ALLOWED_MIME_TYPES.includes(currentFile.type)));
+        
+        if (!isImage && !isVideo) {
+          return NextResponse.json(
+            { message: `Invalid file type for file ${i + 1}: ${currentFile.name}. Only images (JPEG, PNG, GIF, WebP) and videos (MP4, MOV, AVI, WebM) are allowed.` },
+            { status: 400 }
+          );
+        }
+        
+        // Normalize MIME type if it's missing but extension is valid
+        let normalizedMimeType = currentFile.type;
+        if (!normalizedMimeType) {
+          const extensionToMime: Record<string, string> = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'mp4': 'video/mp4',
+            'mov': 'video/quicktime',
+            'avi': 'video/x-msvideo',
+            'webm': 'video/webm',
+          };
+          normalizedMimeType = extensionToMime[fileExtension] || (isVideo ? 'video/mp4' : 'image/jpeg');
+        }
 
-      if (uploadError) {
-        console.error('Supabase Storage upload error:', uploadError);
-        return NextResponse.json(
-          { message: 'Failed to upload image to storage' },
-          { status: 500 }
+        // Validate file size (videos can be larger, handled by direct upload)
+        if (isImage && currentFile.size > MAX_FILE_SIZE) {
+          return NextResponse.json(
+            { message: `File ${i + 1} (${currentFile.name}) exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB. Use direct upload for larger files.` },
+            { status: 413 }
+          );
+        }
+
+        // Generate unique filename
+        const finalFileExtension = fileExtension || (isVideo ? 'mp4' : 'jpg');
+        const fileName = `${randomUUID()}.${finalFileExtension}`;
+        const fileBuffer = Buffer.from(await currentFile.arrayBuffer());
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(storageBucket)
+          .upload(fileName, fileBuffer, {
+            contentType: normalizedMimeType,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error('Supabase Storage upload error:', uploadError);
+          return NextResponse.json(
+            { message: `Failed to upload file ${i + 1} to storage` },
+            { status: 500 }
+          );
+        }
+
+        // Get public URL for the uploaded file
+        const { data: urlData } = supabase.storage
+          .from(storageBucket)
+          .getPublicUrl(fileName);
+
+        const imageUrl = urlData.publicUrl;
+        const thumbnailUrl = imageUrl; // For now, use same URL as thumbnail
+
+        // Save image metadata to database
+        const imageResult = await query(
+          `INSERT INTO images (user_id, image_url, thumbnail_url, file_name, file_size, mime_type, media_type)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id`,
+          [authUser.userId, imageUrl, thumbnailUrl, currentFile.name, currentFile.size, normalizedMimeType, isVideo ? 'video' : 'image']
         );
+
+        imageIds.push(imageResult.rows[0].id);
       }
-
-      // Get public URL for the uploaded image
-      const { data: urlData } = supabase.storage
-        .from(storageBucket)
-        .getPublicUrl(fileName);
-
-      const imageUrl = urlData.publicUrl;
-      const thumbnailUrl = imageUrl;
-
-      // Save image metadata to database
-      const imageResult = await query(
-        `INSERT INTO images (user_id, image_url, thumbnail_url, file_name, file_size, mime_type)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id`,
-        [authUser.userId, imageUrl, thumbnailUrl, file.name, file.size, normalizedMimeType]
-      );
-
-      imageId = imageResult.rows[0].id;
+      
+      // For backward compatibility, set imageId to first image
+      if (imageIds.length > 0) {
+        imageId = imageIds[0];
+      }
     }
 
-    // If no imageId and no file, we can't create a strand
-    if (!imageId && !content?.trim()) {
+    // If no imageIds and no content, we can't create a strand
+    if (imageIds.length === 0 && !content?.trim()) {
       return NextResponse.json(
-        { message: 'Either content or image (or both) is required' },
+        { message: 'Either content or media files (or both) is required' },
         { status: 400 }
       );
     }
@@ -398,10 +466,22 @@ export async function POST(request: NextRequest) {
       `INSERT INTO strands (user_id, content, image_id)
        VALUES ($1, $2, $3)
        RETURNING id, user_id, content, image_id, created_at, updated_at, edited_at`,
-      [authUser.userId, trimmedContent, imageId]
+      [authUser.userId, trimmedContent, imageId || null]
     );
 
     const strand = strandResult.rows[0];
+    
+    // Create strand_media entries for all images
+    if (imageIds.length > 0) {
+      for (let i = 0; i < imageIds.length; i++) {
+        await query(
+          `INSERT INTO strand_media (strand_id, image_id, display_order)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (strand_id, image_id) DO NOTHING`,
+          [strand.id, imageIds[i], i]
+        );
+      }
+    }
 
     // Create strand group shares and send notifications
     if (groupIds.length > 0) {

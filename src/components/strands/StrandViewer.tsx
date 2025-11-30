@@ -358,9 +358,10 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   const isOwner = user?.id === strand.userId;
   const isAdmin = user?.isAdmin || user?.is_admin || false;
   const canEditDelete = isOwner || isAdmin;
-  const hasImage = !!strand.imageId && strand.image;
+  const hasImage = !!strand.imageId && strand.image; // For backward compatibility
   const hasText = !!strand.content;
-  const isVideo = strand.image?.mediaType === 'video' || strand.image?.mimeType?.startsWith('video/');
+  const hasMultipleImages = strand.images && strand.images.length > 0;
+  const displayImages = hasMultipleImages ? strand.images : (hasImage ? [{ id: strand.image!.id, imageId: strand.image!.id, displayOrder: 0, image: strand.image! }] : []);
 
   return (
     <div className="fixed inset-x-0 top-0 bottom-16 bg-black z-[100] flex flex-col animate-fade-in overflow-hidden">
@@ -447,26 +448,37 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="flex flex-col">
           {/* Image or Video (if present) */}
-          {hasImage && strand.image && (
-            <div className="flex-shrink-0 flex items-center justify-center min-h-[40vh] max-h-[70vh] p-4 animate-scale-in">
-              {isVideo ? (
-                <VideoPlayer
-                  src={strand.image.imageUrl || strand.image.mediaUrl || ''}
-                  poster={strand.image.thumbnailUrl || undefined}
-                  className="max-w-full max-h-full"
-                  controls
-                />
-              ) : (
-                <FullscreenZoomableImage
-                  src={strand.image.imageUrl || strand.image.mediaUrl || ''}
-                  alt={strand.image.fileName || 'Strand image'}
-                  className="w-full h-full"
-                  maxZoom={4}
-                  minZoom={1}
-                  doubleTapZoom={2.5}
-                  showControls={true}
-                />
-              )}
+          {displayImages && displayImages.length > 0 && (
+            <div className="flex-shrink-0 space-y-4 p-4">
+              {displayImages.map((mediaEntry, index) => {
+                const media = mediaEntry.image;
+                const isVideo = media.mediaType === 'video' || media.mimeType?.startsWith('video/');
+                return (
+                  <div
+                    key={mediaEntry.id || media.id || index}
+                    className="flex items-center justify-center min-h-[40vh] max-h-[70vh] animate-scale-in"
+                  >
+                    {isVideo ? (
+                      <VideoPlayer
+                        src={media.imageUrl || media.mediaUrl || ''}
+                        poster={media.thumbnailUrl || undefined}
+                        className="max-w-full max-h-full"
+                        controls
+                      />
+                    ) : (
+                      <FullscreenZoomableImage
+                        src={media.imageUrl || media.mediaUrl || ''}
+                        alt={media.fileName || `Strand image ${index + 1}`}
+                        className="w-full h-full"
+                        maxZoom={4}
+                        minZoom={1}
+                        doubleTapZoom={2.5}
+                        showControls={true}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

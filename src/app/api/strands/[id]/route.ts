@@ -85,7 +85,35 @@ export async function GET(
               WHERE sgs.strand_id = s.id
             ),
             '[]'::json
-          ) as groups
+          ) as groups,
+          COALESCE(
+            (
+              SELECT json_agg(
+                json_build_object(
+                  'id', sm.id,
+                  'imageId', sm.image_id,
+                  'displayOrder', sm.display_order,
+                  'image', json_build_object(
+                    'id', im.id,
+                    'imageUrl', im.image_url,
+                    'mediaUrl', COALESCE(im.media_url, im.image_url),
+                    'thumbnailUrl', im.thumbnail_url,
+                    'fileName', im.file_name,
+                    'fileSize', im.file_size,
+                    'mimeType', im.mime_type,
+                    'mediaType', COALESCE(im.media_type, CASE WHEN im.mime_type LIKE 'video/%' THEN 'video' ELSE 'image' END),
+                    'duration', im.duration,
+                    'width', im.width,
+                    'height', im.height
+                  )
+                ) ORDER BY sm.display_order
+              )
+              FROM strand_media sm
+              INNER JOIN images im ON sm.image_id = im.id
+              WHERE sm.strand_id = s.id
+            ),
+            '[]'::json
+          ) as images
         FROM strands s
         INNER JOIN users u ON s.user_id = u.id
         LEFT JOIN images i ON s.image_id = i.id
@@ -135,7 +163,35 @@ export async function GET(
               'isPinned', EXISTS(SELECT 1 FROM strand_pins sp WHERE sp.strand_id = s.id AND sp.group_id = g.id),
               'userRole', gm.role
             )
-          ) FILTER (WHERE g.id IS NOT NULL) as groups
+          ) FILTER (WHERE g.id IS NOT NULL) as groups,
+          COALESCE(
+            (
+              SELECT json_agg(
+                json_build_object(
+                  'id', sm.id,
+                  'imageId', sm.image_id,
+                  'displayOrder', sm.display_order,
+                  'image', json_build_object(
+                    'id', im.id,
+                    'imageUrl', im.image_url,
+                    'mediaUrl', COALESCE(im.media_url, im.image_url),
+                    'thumbnailUrl', im.thumbnail_url,
+                    'fileName', im.file_name,
+                    'fileSize', im.file_size,
+                    'mimeType', im.mime_type,
+                    'mediaType', COALESCE(im.media_type, CASE WHEN im.mime_type LIKE 'video/%' THEN 'video' ELSE 'image' END),
+                    'duration', im.duration,
+                    'width', im.width,
+                    'height', im.height
+                  )
+                ) ORDER BY sm.display_order
+              )
+              FROM strand_media sm
+              INNER JOIN images im ON sm.image_id = im.id
+              WHERE sm.strand_id = s.id
+            ),
+            '[]'::json
+          ) as images
         FROM strands s
         INNER JOIN strand_group_shares sgs ON s.id = sgs.strand_id
         INNER JOIN group_members gm ON sgs.group_id = gm.group_id
@@ -185,6 +241,7 @@ export async function GET(
         width: row.width,
         height: row.height,
       } : null,
+      images: row.images && Array.isArray(row.images) && row.images.length > 0 ? row.images : undefined,
       groups: row.groups || [],
     };
 

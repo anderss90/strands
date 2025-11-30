@@ -1,8 +1,27 @@
+export interface StrandMedia {
+  id: string;
+  imageId: string;
+  displayOrder: number;
+  image: {
+    id: string;
+    imageUrl: string;
+    mediaUrl?: string;
+    thumbnailUrl: string | null;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+    mediaType?: 'image' | 'video';
+    duration?: number;
+    width?: number;
+    height?: number;
+  };
+}
+
 export interface Strand {
   id: string;
   userId: string;
   content: string | null;
-  imageId: string | null;
+  imageId: string | null; // Deprecated: kept for backward compatibility
   createdAt: string;
   updatedAt: string;
   editedAt: string | null;
@@ -27,7 +46,8 @@ export interface Strand {
     duration?: number;
     width?: number;
     height?: number;
-  };
+  }; // Deprecated: kept for backward compatibility, use images array instead
+  images?: StrandMedia[]; // New: array of media entries for multi-media strands
   groups?: {
     id: string;
     name: string;
