@@ -14,8 +14,8 @@ interface StrandCardProps {
 export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCardProps) {
   const hasImage = !!strand.imageId && strand.image; // For backward compatibility
   const hasMultipleImages = strand.images && strand.images.length > 0;
-  const displayImages = hasMultipleImages ? strand.images.slice(0, 2) : (hasImage ? [{ image: strand.image!, displayOrder: 0 }] : []);
-  const hasMoreImages = hasMultipleImages && strand.images!.length > 2;
+  const displayImages = hasMultipleImages && strand.images ? strand.images.slice(0, 2) : (hasImage ? [{ image: strand.image!, displayOrder: 0 }] : []);
+  const hasMoreImages = hasMultipleImages && strand.images && strand.images.length > 2;
   const [localFireCount, setLocalFireCount] = useState(strand.fireCount || 0);
   const [localHasUserFired, setLocalHasUserFired] = useState(strand.hasUserFired || false);
   const [firing, setFiring] = useState(false);
@@ -175,9 +175,9 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
                     loading="lazy"
                   />
                 )}
-                {showMoreBadge && (
+                {showMoreBadge && strand.images && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                    <span className="text-white text-2xl font-bold">+{strand.images!.length - 2}</span>
+                    <span className="text-white text-2xl font-bold">+{strand.images.length - 2}</span>
                   </div>
                 )}
                 {isVideo && (

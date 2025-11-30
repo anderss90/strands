@@ -361,7 +361,7 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   const hasImage = !!strand.imageId && strand.image; // For backward compatibility
   const hasText = !!strand.content;
   const hasMultipleImages = strand.images && strand.images.length > 0;
-  const displayImages = hasMultipleImages ? strand.images : (hasImage ? [{ id: strand.image!.id, imageId: strand.image!.id, displayOrder: 0, image: strand.image! }] : []);
+  const displayImages = hasMultipleImages && strand.images ? strand.images : (hasImage ? [{ id: strand.image!.id, imageId: strand.image!.id, displayOrder: 0, image: strand.image! }] : []);
 
   return (
     <div className="fixed inset-x-0 top-0 bottom-16 bg-black z-[100] flex flex-col animate-fade-in overflow-hidden">
