@@ -328,7 +328,9 @@ export default function ImageViewer({ imageId, onClose }: ImageViewerProps) {
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-medium">
-                        {comment.user.displayName.charAt(0).toUpperCase()}
+                        {comment.user.displayName && comment.user.displayName.length > 0
+                          ? comment.user.displayName.charAt(0).toUpperCase()
+                          : '?'}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">

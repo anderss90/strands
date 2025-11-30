@@ -15,7 +15,15 @@ export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  // Safely get token from localStorage
+  let token: string | null = null;
+  try {
+    token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  } catch (error) {
+    // localStorage might not be available (e.g., private browsing)
+    // Continue without token - API will return 401 if needed
+    console.warn('Unable to access localStorage:', error);
+  }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -34,9 +42,14 @@ export async function apiRequest<T>(
   if (!response.ok) {
     // Handle 401 Unauthorized - redirect to login
     if (response.status === 401 && typeof window !== 'undefined') {
-      // Clear tokens
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      // Safely clear tokens
+      try {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      } catch (error) {
+        // Ignore storage errors
+        console.warn('Failed to clear tokens:', error);
+      }
       
       // Redirect to login page (avoid redirect if already on login/signup page)
       const currentPath = window.location.pathname;

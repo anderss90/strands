@@ -78,7 +78,16 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
     try {
       setLoading(true);
       setError('');
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      
+      // Safely get token from localStorage
+      let token: string | null = null;
+      try {
+        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      } catch (error) {
+        setError('Unable to access storage. Please check your browser settings.');
+        return;
+      }
+      
       const response = await fetch(`/api/strands/${strandId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -101,7 +110,16 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   const fetchComments = async () => {
     try {
       setCommentsLoading(true);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      
+      // Safely get token from localStorage
+      let token: string | null = null;
+      try {
+        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      } catch (error) {
+        console.error('Failed to get access token:', error);
+        return;
+      }
+      
       const response = await fetch(`/api/strands/${strandId}/comments`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -127,7 +145,16 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
 
     try {
       setSubmittingComment(true);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      
+      // Safely get token from localStorage
+      let token: string | null = null;
+      try {
+        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      } catch (error) {
+        alert('Unable to access storage. Please check your browser settings.');
+        return;
+      }
+      
       const response = await fetch(`/api/strands/${strandId}/comments`, {
         method: 'POST',
         headers: {
@@ -158,7 +185,17 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
 
     try {
       setDeleting(true);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      
+      // Safely get token from localStorage
+      let token: string | null = null;
+      try {
+        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      } catch (error) {
+        alert('Unable to access storage. Please check your browser settings.');
+        setDeleting(false);
+        return;
+      }
+      
       const response = await fetch(`/api/strands/${strandId}`, {
         method: 'DELETE',
         headers: {
@@ -207,7 +244,17 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
 
     try {
       setDeletingComment(commentId);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      
+      // Safely get token from localStorage
+      let token: string | null = null;
+      try {
+        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      } catch (error) {
+        alert('Unable to access storage. Please check your browser settings.');
+        setDeletingComment(null);
+        return;
+      }
+      
       const response = await fetch(`/api/strands/${strandId}/comments/${commentId}`, {
         method: 'DELETE',
         headers: {
@@ -583,7 +630,9 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-medium">
-                        {comment.user.displayName.charAt(0).toUpperCase()}
+                        {comment.user.displayName && comment.user.displayName.length > 0
+                          ? comment.user.displayName.charAt(0).toUpperCase()
+                          : '?'}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">

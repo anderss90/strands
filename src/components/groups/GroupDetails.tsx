@@ -175,7 +175,9 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
                             />
                           ) : (
                             <span className="text-blue-400 text-xl">
-                              {member.user?.displayName.charAt(0).toUpperCase() || '?'}
+                              {member.user?.displayName && member.user.displayName.length > 0
+                                ? member.user.displayName.charAt(0).toUpperCase()
+                                : '?'}
                             </span>
                           )}
                         </div>

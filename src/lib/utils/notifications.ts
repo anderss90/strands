@@ -30,7 +30,13 @@ export async function enableNotificationsAuto(): Promise<{ success: boolean; err
       
       if (subscription) {
         // Already subscribed, verify with server
-        const token = localStorage.getItem('accessToken');
+        let token: string | null = null;
+        try {
+          token = localStorage.getItem('accessToken');
+        } catch (error) {
+          // localStorage might not be available
+          return { success: false, error: 'Unable to access storage' };
+        }
         if (token) {
           try {
             const response = await fetch('/api/notifications/subscribe', {
@@ -87,7 +93,13 @@ export async function enableNotificationsAuto(): Promise<{ success: boolean; err
     let subscription = await registration.pushManager.getSubscription();
     if (subscription) {
       // Already subscribed, send to server
-      const token = localStorage.getItem('accessToken');
+      let token: string | null = null;
+      try {
+        token = localStorage.getItem('accessToken');
+      } catch (error) {
+        // localStorage might not be available
+        return { success: false, error: 'Unable to access storage' };
+      }
       if (token) {
         const response = await fetch('/api/notifications/subscribe', {
           method: 'POST',
@@ -117,7 +129,13 @@ export async function enableNotificationsAuto(): Promise<{ success: boolean; err
     });
 
     // Send subscription to server
-    const token = localStorage.getItem('accessToken');
+    let token: string | null = null;
+    try {
+      token = localStorage.getItem('accessToken');
+    } catch (error) {
+      // localStorage might not be available
+      return { success: false, error: 'Unable to access storage' };
+    }
     if (!token) {
       return { success: false, error: 'Not authenticated' };
     }

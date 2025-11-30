@@ -94,7 +94,9 @@ export default function FriendList() {
                     className="w-12 h-12 rounded-full object-cover"
                   />
                 ) : (
-                  friend.displayName.charAt(0).toUpperCase()
+                  friend.displayName && friend.displayName.length > 0
+                    ? friend.displayName.charAt(0).toUpperCase()
+                    : '?'
                 )}
               </span>
             </div>

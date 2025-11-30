@@ -130,7 +130,9 @@ export default function CreateGroup({ onSuccess }: CreateGroupProps) {
                       />
                     ) : (
                       <span className="text-blue-400 text-lg">
-                        {friend.displayName.charAt(0).toUpperCase()}
+                        {friend.displayName && friend.displayName.length > 0
+                          ? friend.displayName.charAt(0).toUpperCase()
+                          : '?'}
                       </span>
                     )}
                   </div>

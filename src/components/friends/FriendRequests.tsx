@@ -97,7 +97,9 @@ export default function FriendRequests() {
                         className="w-12 h-12 rounded-full object-cover"
                       />
                     ) : (
-                      user.displayName.charAt(0).toUpperCase()
+                      user.displayName && user.displayName.length > 0
+                        ? user.displayName.charAt(0).toUpperCase()
+                        : '?'
                     )}
                   </span>
                 </div>

@@ -213,7 +213,16 @@ export default function StrandEdit({ strandId, onSuccess, onCancel }: StrandEdit
     setUpdating(true);
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      // Safely get token from localStorage
+      let token: string | null = null;
+      try {
+        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      } catch (error) {
+        setError('Unable to access storage. Please check your browser settings.');
+        setUpdating(false);
+        return;
+      }
+      
       const formData = new FormData();
       
       if (content.trim()) {

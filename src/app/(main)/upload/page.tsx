@@ -13,25 +13,54 @@ function UploadPageContent() {
 
   // Check for shared image from sessionStorage
   useEffect(() => {
-    const sharedImageData = sessionStorage.getItem('sharedImage');
-    if (sharedImageData) {
+    try {
+      // Safely access sessionStorage
+      let sharedImageData: string | null = null;
       try {
-        const imageData = JSON.parse(sharedImageData);
-        // Convert base64 back to File
-        const binaryString = atob(imageData.data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const blob = new Blob([bytes], { type: imageData.type });
-        const file = new File([blob], imageData.name, { type: imageData.type });
-        setSharedImage(file);
-        // Clear sessionStorage after retrieving
-        sessionStorage.removeItem('sharedImage');
-      } catch (error) {
-        console.error('Error processing shared image:', error);
-        sessionStorage.removeItem('sharedImage');
+        sharedImageData = sessionStorage.getItem('sharedImage');
+      } catch (storageError) {
+        // sessionStorage might not be available (e.g., private browsing)
+        console.warn('Unable to access sessionStorage:', storageError);
+        return;
       }
+
+      if (sharedImageData) {
+        try {
+          const imageData = JSON.parse(sharedImageData);
+          
+          // Safely use atob
+          if (typeof window === 'undefined' || typeof window.atob !== 'function') {
+            throw new Error('atob is not available');
+          }
+          
+          // Convert base64 back to File
+          const binaryString = window.atob(imageData.data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: imageData.type });
+          const file = new File([blob], imageData.name, { type: imageData.type });
+          setSharedImage(file);
+          
+          // Clear sessionStorage after retrieving
+          try {
+            sessionStorage.removeItem('sharedImage');
+          } catch (clearError) {
+            console.warn('Failed to clear sessionStorage:', clearError);
+          }
+        } catch (error) {
+          console.error('Error processing shared image:', error);
+          // Try to clear invalid data
+          try {
+            sessionStorage.removeItem('sharedImage');
+          } catch (clearError) {
+            // Ignore clear errors
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in shared image effect:', error);
     }
   }, []);
 

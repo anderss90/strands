@@ -47,7 +47,16 @@ export default function StrandFeed({ groupId, pinnedOnly = false, onStrandClick 
       setError('');
 
       const currentOffset = reset ? 0 : offset;
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      
+      // Safely get token from localStorage
+      let token: string | null = null;
+      try {
+        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      } catch (error) {
+        // localStorage might not be available (e.g., private browsing)
+        setError('Unable to access storage. Please check your browser settings.');
+        return;
+      }
       
       let url = '/api/strands';
       if (groupId) {

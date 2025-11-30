@@ -391,7 +391,16 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     setUploadProgress(0);
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      // Safely get token from localStorage
+      let token: string | null = null;
+      try {
+        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      } catch (error) {
+        setError('Unable to access storage. Please check your browser settings.');
+        setLoading(false);
+        return;
+      }
+      
       if (!token) {
         throw new Error('Not authenticated');
       }

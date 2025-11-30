@@ -36,7 +36,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user is logged in on mount
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
+        // Safely get token from localStorage
+        let token: string | null = null;
+        try {
+          token = localStorage.getItem('accessToken');
+        } catch (error) {
+          // localStorage might not be available (e.g., private browsing)
+          console.warn('Unable to access localStorage:', error);
+          setLoading(false);
+          return;
+        }
+
         if (token) {
           // Try to get user profile
           try {
@@ -61,14 +71,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (process.env.NODE_ENV !== 'test') {
               console.error('Failed to fetch user profile:', error);
             }
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            // Safely clear tokens
+            try {
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
+            } catch (storageError) {
+              // Ignore storage errors
+            }
           }
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        // Safely clear tokens
+        try {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+        } catch (storageError) {
+          // Ignore storage errors
+        }
       } finally {
         setLoading(false);
       }
@@ -80,8 +100,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string) => {
     try {
       const response = await authApi.login({ username, password });
-      localStorage.setItem('accessToken', response.tokens.accessToken);
-      localStorage.setItem('refreshToken', response.tokens.refreshToken);
+      
+      // Safely store tokens
+      try {
+        localStorage.setItem('accessToken', response.tokens.accessToken);
+        localStorage.setItem('refreshToken', response.tokens.refreshToken);
+      } catch (storageError) {
+        // If storage fails, still set user but warn
+        console.warn('Failed to store tokens in localStorage:', storageError);
+        throw new Error('Unable to save login session. Please check your browser settings.');
+      }
+      
       setUser(response.user);
       
       // Enable notifications automatically after successful login
@@ -100,8 +129,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = async (username: string, password: string, inviteToken?: string) => {
     try {
       const response = await authApi.signup({ username, password, inviteToken });
-      localStorage.setItem('accessToken', response.tokens.accessToken);
-      localStorage.setItem('refreshToken', response.tokens.refreshToken);
+      
+      // Safely store tokens
+      try {
+        localStorage.setItem('accessToken', response.tokens.accessToken);
+        localStorage.setItem('refreshToken', response.tokens.refreshToken);
+      } catch (storageError) {
+        // If storage fails, still set user but warn
+        console.warn('Failed to store tokens in localStorage:', storageError);
+        throw new Error('Unable to save login session. Please check your browser settings.');
+      }
+      
       setUser(response.user);
       
       // Enable notifications automatically after successful signup
@@ -120,8 +158,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    // Safely clear tokens
+    try {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+    } catch (error) {
+      // Ignore storage errors - still log out user
+      console.warn('Failed to clear tokens from localStorage:', error);
+    }
     setUser(null);
   };
 
