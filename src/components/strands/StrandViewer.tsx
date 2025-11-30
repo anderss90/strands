@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Strand } from '@/types/strand';
@@ -33,10 +33,44 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const isHandlingBackRef = useRef(false); // Track if we're currently handling a back button press
 
   useEffect(() => {
     fetchStrand();
     fetchComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [strandId]);
+
+  // Intercept browser back button when viewing a strand
+  useEffect(() => {
+    // Push a state to history when viewer opens so we can detect back button
+    const historyState = { strandViewer: true, strandId };
+    window.history.pushState(historyState, '', window.location.href);
+
+    const handlePopState = (event: PopStateEvent) => {
+      // When back button is pressed while viewing a strand, close the viewer
+      // and prevent navigation by pushing our state back
+      isHandlingBackRef.current = true;
+      handleClose();
+      // Push state back to prevent browser from navigating away
+      window.history.pushState(historyState, '', window.location.href);
+      // Reset flag after a brief delay
+      setTimeout(() => {
+        isHandlingBackRef.current = false;
+      }, 100);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      // Clean up history state when component unmounts (e.g., close button clicked)
+      // Only if we're not currently handling a back button press
+      if (!isHandlingBackRef.current && window.history.state?.strandViewer === true && window.history.state?.strandId === strandId) {
+        // Replace current state instead of going back to avoid triggering popstate
+        window.history.replaceState(null, '', window.location.href);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [strandId]);
 
