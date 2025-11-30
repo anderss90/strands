@@ -33,6 +33,8 @@ export default function FullscreenZoomableImage({
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const lastTouchDistanceRef = useRef<number | null>(null);
+  const touchHandledRef = useRef(false); // Track if touch event already handled fullscreen
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track click timeout to prevent double-click from also triggering single click
 
   // Check if fullscreen is supported
   useEffect(() => {
@@ -85,6 +87,15 @@ export default function FullscreenZoomableImage({
     setScale(1);
     setPosition({ x: 0, y: 0 });
   }, [src]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
     const dx = touch1.clientX - touch2.clientX;
@@ -201,11 +212,26 @@ export default function FullscreenZoomableImage({
 
       if (tapDelay < 300 && tapDelay > 0) {
         // Double tap detected - toggle fullscreen
+        touchHandledRef.current = true;
+        // Clear any pending click timeout
+        if (clickTimeoutRef.current) {
+          clearTimeout(clickTimeoutRef.current);
+          clickTimeoutRef.current = null;
+        }
         handleFullscreen();
+        // Reset touch handled flag after a delay to allow for subsequent interactions
+        setTimeout(() => {
+          touchHandledRef.current = false;
+        }, 300);
       } else if (tapDelay >= 300 || tapDelay === 0) {
         // Single tap - toggle fullscreen if not dragging
         if (!isDragging) {
+          touchHandledRef.current = true;
           handleFullscreen();
+          // Reset touch handled flag after a delay to prevent click event from firing
+          setTimeout(() => {
+            touchHandledRef.current = false;
+          }, 300);
         }
       }
     }
@@ -271,18 +297,37 @@ export default function FullscreenZoomableImage({
   };
 
   const handleClick = (e: MouseEvent<HTMLDivElement>) => {
+    // Skip if touch event already handled this (prevents duplicate calls on touch devices)
+    if (touchHandledRef.current) {
+      return;
+    }
+    
     // Toggle fullscreen on single click if:
     // - Mouse hasn't moved (wasn't a drag)
     // - Not currently dragging
     if (!hasMoved && !isDragging) {
       e.stopPropagation();
-      handleFullscreen();
+      // Delay to check if this is part of a double click
+      clickTimeoutRef.current = setTimeout(() => {
+        handleFullscreen();
+        clickTimeoutRef.current = null;
+      }, 200);
     }
   };
 
   const handleDoubleClick = (e: MouseEvent<HTMLDivElement>) => {
+    // Skip if touch event already handled this (prevents duplicate calls on touch devices)
+    if (touchHandledRef.current) {
+      return;
+    }
+    
     // Toggle fullscreen on double click
     e.stopPropagation();
+    // Clear any pending single click timeout
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
     handleFullscreen();
   };
 
