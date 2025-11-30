@@ -77,7 +77,15 @@ export default function ProfilePage() {
     setNotificationMessage(null);
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      // Safely get token from localStorage (may fail in private browsing mode)
+      let token: string | null = null;
+      try {
+        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      } catch (error) {
+        // localStorage might not be available (e.g., private browsing on iOS Safari)
+        throw new Error('Unable to access storage. Please check your browser settings.');
+      }
+
       if (!token) {
         throw new Error('Not authenticated');
       }

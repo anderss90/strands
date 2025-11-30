@@ -22,8 +22,21 @@ export function useNotifications() {
       return;
     }
 
-    const isSupported = 'serviceWorker' in navigator && 'PushManager' in window;
-    const permission = Notification.permission;
+    // Safely check for Notification API
+    let permission: NotificationPermission = 'default';
+    try {
+      if (typeof Notification !== 'undefined') {
+        permission = Notification.permission;
+      }
+    } catch (error) {
+      console.warn('Notification API not available:', error);
+    }
+
+    // Check for service worker and push manager support
+    const isSupported = 
+      'serviceWorker' in navigator && 
+      'PushManager' in window &&
+      typeof Notification !== 'undefined';
 
     setState(prev => ({
       ...prev,
@@ -39,7 +52,18 @@ export function useNotifications() {
 
   const checkSubscriptionStatus = async () => {
     try {
+      // Check if service worker is available
+      if (!('serviceWorker' in navigator)) {
+        return;
+      }
+
       const registration = await navigator.serviceWorker.ready;
+      
+      // Check if pushManager is available
+      if (!registration.pushManager) {
+        return;
+      }
+
       const subscription = await registration.pushManager.getSubscription();
       setState(prev => ({
         ...prev,
@@ -47,6 +71,11 @@ export function useNotifications() {
       }));
     } catch (error) {
       console.error('Error checking subscription status:', error);
+      // Don't crash - just set subscribed to false
+      setState(prev => ({
+        ...prev,
+        isSubscribed: false,
+      }));
     }
   };
 
@@ -58,11 +87,23 @@ export function useNotifications() {
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
+      // Safely check for Notification API
+      if (typeof Notification === 'undefined') {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Notifications are not supported in this browser' };
+      }
+
       // Request permission
-      let currentPermission = Notification.permission;
-      if (currentPermission === 'default') {
-        currentPermission = await Notification.requestPermission();
-        setState(prev => ({ ...prev, permission: currentPermission }));
+      let currentPermission: NotificationPermission = 'default';
+      try {
+        currentPermission = Notification.permission;
+        if (currentPermission === 'default') {
+          currentPermission = await Notification.requestPermission();
+          setState(prev => ({ ...prev, permission: currentPermission }));
+        }
+      } catch (error) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Failed to request notification permission' };
       }
 
       if (currentPermission !== 'granted') {
@@ -77,34 +118,83 @@ export function useNotifications() {
         return { success: false, error: 'Push notifications are not configured' };
       }
 
+      // Check if service worker is available
+      if (!('serviceWorker' in navigator)) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Service workers are not supported' };
+      }
+
       // Get service worker registration
-      const registration = await navigator.serviceWorker.ready;
+      let registration: ServiceWorkerRegistration;
+      try {
+        registration = await navigator.serviceWorker.ready;
+      } catch (error) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Service worker is not ready' };
+      }
+
+      // Check if pushManager is available
+      if (!registration.pushManager) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Push manager is not available' };
+      }
 
       // Check if already subscribed
-      let subscription = await registration.pushManager.getSubscription();
+      let subscription: PushSubscription | null = null;
+      try {
+        subscription = await registration.pushManager.getSubscription();
+      } catch (error) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Failed to check subscription status' };
+      }
+
       if (subscription) {
         setState(prev => ({ ...prev, isSubscribed: true, isLoading: false }));
         return { success: true };
       }
 
       // Subscribe to push notifications
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-      });
+      try {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+      } catch (error: any) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: error.message || 'Failed to subscribe to push notifications' };
+      }
+
+      // Safely get subscription keys
+      const p256dhKey = subscription.getKey('p256dh');
+      const authKey = subscription.getKey('auth');
+      
+      if (!p256dhKey || !authKey) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Failed to get subscription keys' };
+      }
+
+      // Safely get access token from localStorage
+      let accessToken: string | null = null;
+      try {
+        accessToken = localStorage.getItem('accessToken');
+      } catch (error) {
+        // localStorage might not be available (e.g., private browsing)
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Failed to access storage' };
+      }
 
       // Send subscription to server
       const response = await fetch('/api/notifications/subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          Authorization: `Bearer ${accessToken || ''}`,
         },
         body: JSON.stringify({
           endpoint: subscription.endpoint,
           keys: {
-            p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
-            auth: arrayBufferToBase64(subscription.getKey('auth')!),
+            p256dh: arrayBufferToBase64(p256dhKey),
+            auth: arrayBufferToBase64(authKey),
           },
         }),
       });
@@ -136,27 +226,69 @@ export function useNotifications() {
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      // Check if service worker is available
+      if (!('serviceWorker' in navigator)) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Service workers are not supported' };
+      }
+
+      let registration: ServiceWorkerRegistration;
+      try {
+        registration = await navigator.serviceWorker.ready;
+      } catch (error) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Service worker is not ready' };
+      }
+
+      // Check if pushManager is available
+      if (!registration.pushManager) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Push manager is not available' };
+      }
+
+      let subscription: PushSubscription | null = null;
+      try {
+        subscription = await registration.pushManager.getSubscription();
+      } catch (error) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: 'Failed to get subscription' };
+      }
 
       if (subscription) {
         // Unsubscribe from push notifications
-        await subscription.unsubscribe();
+        try {
+          await subscription.unsubscribe();
+        } catch (error) {
+          console.error('Failed to unsubscribe:', error);
+        }
+
+        // Safely get access token from localStorage
+        let accessToken: string | null = null;
+        try {
+          accessToken = localStorage.getItem('accessToken');
+        } catch (error) {
+          // localStorage might not be available (e.g., private browsing)
+          console.warn('Failed to access localStorage:', error);
+        }
 
         // Remove subscription from server
-        const response = await fetch('/api/notifications/unsubscribe', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-          },
-          body: JSON.stringify({
-            endpoint: subscription.endpoint,
-          }),
-        });
+        try {
+          const response = await fetch('/api/notifications/unsubscribe', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken || ''}`,
+            },
+            body: JSON.stringify({
+              endpoint: subscription.endpoint,
+            }),
+          });
 
-        if (!response.ok) {
-          console.error('Failed to unsubscribe from server');
+          if (!response.ok) {
+            console.error('Failed to unsubscribe from server');
+          }
+        } catch (error) {
+          console.error('Failed to send unsubscribe request:', error);
         }
       }
 
@@ -178,24 +310,46 @@ export function useNotifications() {
     if (!base64String) {
       return new Uint8Array(0);
     }
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
+    try {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      
+      // Safely use atob
+      if (typeof window === 'undefined' || typeof window.atob !== 'function') {
+        throw new Error('atob is not available');
+      }
+      
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray.buffer;
+    } catch (error) {
+      console.error('Error converting VAPID key:', error);
+      return new Uint8Array(0);
     }
-    return outputArray.buffer;
   }
 
   // Helper function to convert ArrayBuffer to base64
   function arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    try {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      
+      // Safely use btoa
+      if (typeof window === 'undefined' || typeof window.btoa !== 'function') {
+        throw new Error('btoa is not available');
+      }
+      
+      return window.btoa(binary);
+    } catch (error) {
+      console.error('Error converting ArrayBuffer to base64:', error);
+      return '';
     }
-    return window.btoa(binary);
   }
 
   return {
