@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Strand } from '@/types/strand';
 import StrandCard from './StrandCard';
@@ -13,6 +13,10 @@ interface StrandFeedProps {
   onStrandClick?: (strandId: string) => void;
 }
 
+export interface StrandFeedRef {
+  refresh: () => void;
+}
+
 interface StrandFeedResponse {
   strands: Strand[];
   pagination: {
@@ -22,7 +26,8 @@ interface StrandFeedResponse {
   };
 }
 
-export default function StrandFeed({ groupId, pinnedOnly = false, onStrandClick }: StrandFeedProps) {
+const StrandFeed = forwardRef<StrandFeedRef, StrandFeedProps>(
+  ({ groupId, pinnedOnly = false, onStrandClick }, ref) => {
   const [strands, setStrands] = useState<Strand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -100,6 +105,13 @@ export default function StrandFeed({ groupId, pinnedOnly = false, onStrandClick 
       fetchStrands(false);
     }
   };
+
+  // Expose refresh function to parent components
+  useImperativeHandle(ref, () => ({
+    refresh: () => {
+      fetchStrands(true);
+    },
+  }));
 
   if (loading) {
     return (
@@ -188,4 +200,8 @@ export default function StrandFeed({ groupId, pinnedOnly = false, onStrandClick 
       )}
     </div>
   );
-}
+});
+
+StrandFeed.displayName = 'StrandFeed';
+
+export default StrandFeed;

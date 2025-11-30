@@ -16,9 +16,10 @@ interface StrandViewerProps {
   strandId: string;
   onClose?: () => void;
   onEdit?: () => void;
+  onRefresh?: () => void;
 }
 
-export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewerProps) {
+export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: StrandViewerProps) {
   const [strand, setStrand] = useState<Strand | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -38,6 +39,24 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
   useEffect(() => {
     fetchStrand();
     fetchComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [strandId]);
+
+  // Refresh strand data when page becomes visible (e.g., after returning from edit page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Small delay to ensure navigation is complete
+        setTimeout(() => {
+          fetchStrand();
+        }, 100);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [strandId]);
 
@@ -205,6 +224,11 @@ export default function StrandViewer({ strandId, onClose, onEdit }: StrandViewer
 
       if (!response.ok) {
         throw new Error('Failed to delete strand');
+      }
+
+      // Refresh feed after deletion
+      if (onRefresh) {
+        onRefresh();
       }
 
       if (onClose) {

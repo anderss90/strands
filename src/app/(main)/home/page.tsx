@@ -1,22 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import StrandFeed from '@/components/strands/StrandFeed';
+import StrandFeed, { StrandFeedRef } from '@/components/strands/StrandFeed';
 import StrandViewer from '@/components/strands/StrandViewer';
 
 export default function HomePage() {
   const { user, loading, isAuthenticated } = useAuth();
   const router = useRouter();
   const [selectedStrandId, setSelectedStrandId] = useState<string | null>(null);
+  const feedRef = useRef<StrandFeedRef>(null);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push('/login');
     }
   }, [loading, isAuthenticated, router]);
+
+  // Refresh feed when page becomes visible (e.g., after returning from edit page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && feedRef.current) {
+        // Small delay to ensure navigation is complete
+        setTimeout(() => {
+          feedRef.current?.refresh();
+        }, 100);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -41,7 +59,10 @@ export default function HomePage() {
         </div>
 
         <div className="bg-gray-800 rounded-lg shadow-sm p-6 animate-slide-up border border-gray-700">
-          <StrandFeed onStrandClick={(strandId) => setSelectedStrandId(strandId)} />
+          <StrandFeed 
+            ref={feedRef}
+            onStrandClick={(strandId) => setSelectedStrandId(strandId)} 
+          />
         </div>
       </div>
 
@@ -49,6 +70,9 @@ export default function HomePage() {
         <StrandViewer
           strandId={selectedStrandId}
           onClose={() => setSelectedStrandId(null)}
+          onRefresh={() => {
+            feedRef.current?.refresh();
+          }}
         />
       )}
     </div>

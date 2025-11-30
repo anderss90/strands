@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { groupApi, GroupWithMembers } from '@/lib/api';
-import StrandFeed from '@/components/strands/StrandFeed';
+import StrandFeed, { StrandFeedRef } from '@/components/strands/StrandFeed';
 import StrandViewer from '@/components/strands/StrandViewer';
 import ShareGroupModal from '@/components/groups/ShareGroupModal';
 
@@ -20,6 +20,7 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
   const [selectedStrandId, setSelectedStrandId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pinned' | 'info'>('all');
   const [showShareModal, setShowShareModal] = useState(false);
+  const feedRef = useRef<StrandFeedRef>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -27,6 +28,23 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
     markGroupAsRead();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
+
+  // Refresh feed when page becomes visible (e.g., after returning from edit page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && feedRef.current) {
+        // Small delay to ensure navigation is complete
+        setTimeout(() => {
+          feedRef.current?.refresh();
+        }, 100);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const markGroupAsRead = async () => {
     try {
@@ -238,6 +256,7 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
           </div>
         ) : (
           <StrandFeed
+            ref={feedRef}
             groupId={groupId}
             pinnedOnly={activeTab === 'pinned'}
             onStrandClick={(strandId) => setSelectedStrandId(strandId)}
@@ -256,6 +275,9 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
         <StrandViewer
           strandId={selectedStrandId}
           onClose={() => setSelectedStrandId(null)}
+          onRefresh={() => {
+            feedRef.current?.refresh();
+          }}
         />
       )}
     </div>
