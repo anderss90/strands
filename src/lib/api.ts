@@ -95,6 +95,8 @@ export const userApi = {
       username: string;
       display_name: string;
       profile_picture_url: string | null;
+      is_admin?: boolean;
+      isAdmin?: boolean;
       created_at: string;
       updated_at: string;
     }>('/api/users/profile');

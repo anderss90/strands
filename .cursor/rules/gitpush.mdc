@@ -1,4 +1,6 @@
 ---
-Push changed to git if a remote has been set up
+description: Push to git
+globs:
 alwaysApply: true
 ---
+- Always push changes to git if a remote has been set up
