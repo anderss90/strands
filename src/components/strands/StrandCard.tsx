@@ -13,6 +13,7 @@ interface StrandCardProps {
 
 export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCardProps) {
   const hasImage = !!strand.imageId && strand.image; // For backward compatibility
+  const hasText = !!strand.content;
   const hasMultipleImages = strand.images && strand.images.length > 0;
   const displayImages = hasMultipleImages && strand.images ? strand.images.slice(0, 2) : (hasImage ? [{ image: strand.image!, displayOrder: 0 }] : []);
   const hasMoreImages = hasMultipleImages && strand.images && strand.images.length > 2;
