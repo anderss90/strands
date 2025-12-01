@@ -488,6 +488,7 @@ export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: S
                         poster={media.thumbnailUrl || undefined}
                         className="max-w-full max-h-full"
                         controls
+                        autoplay={false}
                       />
                     ) : (
                       <FullscreenZoomableImage

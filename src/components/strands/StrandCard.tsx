@@ -30,6 +30,15 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
     setLocalHasUserFired(strand.hasUserFired || false);
   }, [strand.fireCount, strand.hasUserFired]);
 
+  // Prevent video autoplay on iOS
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      // Explicitly pause video to prevent autoplay on iOS Safari
+      video.pause();
+    }
+  }, []);
+
   // Fetch comments for the strand
   useEffect(() => {
     const fetchComments = async () => {
@@ -156,11 +165,14 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
                       preload="metadata"
                       playsInline
                       muted
+                      autoPlay={false}
                       onLoadedMetadata={(e) => {
                         const video = e.currentTarget;
                         if (video.duration) {
                           video.currentTime = Math.min(0.1, video.duration / 10);
                         }
+                        // Explicitly pause after loading metadata (iOS Safari workaround)
+                        video.pause();
                       }}
                       onSeeked={(e) => {
                         e.currentTarget.pause();

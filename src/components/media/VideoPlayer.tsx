@@ -36,13 +36,26 @@ export default function VideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
+    // Explicitly prevent autoplay on iOS
+    if (!autoplay) {
+      video.pause();
+    }
+
     const handleLoadStart = () => {
       setIsLoading(true);
       setError(null);
+      // Ensure video is paused on load (iOS Safari can autoplay muted videos)
+      if (!autoplay) {
+        video.pause();
+      }
     };
 
     const handleCanPlay = () => {
       setIsLoading(false);
+      // Explicitly pause if autoplay is disabled (iOS Safari workaround)
+      if (!autoplay) {
+        video.pause();
+      }
     };
 
     const handlePlay = () => {
@@ -81,7 +94,7 @@ export default function VideoPlayer({
       video.removeEventListener('ended', handleEnded);
       video.removeEventListener('error', handleError);
     };
-  }, [onPlay, onPause, onEnded]);
+  }, [onPlay, onPause, onEnded, autoplay]);
 
   return (
     <div className={`relative ${className}`}>
