@@ -76,6 +76,7 @@ const StrandFeed = forwardRef<StrandFeedRef, StrandFeedProps>(
         headers: {
           'Authorization': `Bearer ${token}`,
         },
+        cache: 'no-store', // Prevent browser caching
       });
 
       if (!response.ok) {

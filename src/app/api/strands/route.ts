@@ -202,7 +202,14 @@ export async function GET(request: NextRequest) {
         offset,
         hasMore: strands.length === limit,
       },
-    }, { status: 200 });
+    }, { 
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
   } catch (error: any) {
     console.error('Get strands feed error:', error);
     return NextResponse.json(

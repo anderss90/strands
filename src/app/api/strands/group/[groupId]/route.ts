@@ -94,7 +94,35 @@ export async function GET(
             SELECT 1
             FROM strand_fires sf
             WHERE sf.strand_id = s.id AND sf.user_id = $4
-          ) as has_user_fired
+          ) as has_user_fired,
+          COALESCE(
+            (
+              SELECT json_agg(
+                json_build_object(
+                  'id', sm.id,
+                  'imageId', sm.image_id,
+                  'displayOrder', sm.display_order,
+                  'image', json_build_object(
+                    'id', im.id,
+                    'imageUrl', im.image_url,
+                    'mediaUrl', COALESCE(im.media_url, im.image_url),
+                    'thumbnailUrl', im.thumbnail_url,
+                    'fileName', im.file_name,
+                    'fileSize', im.file_size,
+                    'mimeType', im.mime_type,
+                    'mediaType', COALESCE(im.media_type, CASE WHEN im.mime_type LIKE 'video/%' THEN 'video' ELSE 'image' END),
+                    'duration', im.duration,
+                    'width', im.width,
+                    'height', im.height
+                  )
+                ) ORDER BY sm.display_order
+              )
+              FROM strand_media sm
+              INNER JOIN images im ON sm.image_id = im.id
+              WHERE sm.strand_id = s.id
+            ),
+            '[]'::json
+          ) as images
         FROM strands s
         INNER JOIN strand_group_shares sgs ON s.id = sgs.strand_id
         INNER JOIN strand_pins sp ON s.id = sp.strand_id AND sp.group_id = $1
@@ -143,7 +171,35 @@ export async function GET(
             SELECT 1
             FROM strand_fires sf
             WHERE sf.strand_id = s.id AND sf.user_id = $4
-          ) as has_user_fired
+          ) as has_user_fired,
+          COALESCE(
+            (
+              SELECT json_agg(
+                json_build_object(
+                  'id', sm.id,
+                  'imageId', sm.image_id,
+                  'displayOrder', sm.display_order,
+                  'image', json_build_object(
+                    'id', im.id,
+                    'imageUrl', im.image_url,
+                    'mediaUrl', COALESCE(im.media_url, im.image_url),
+                    'thumbnailUrl', im.thumbnail_url,
+                    'fileName', im.file_name,
+                    'fileSize', im.file_size,
+                    'mimeType', im.mime_type,
+                    'mediaType', COALESCE(im.media_type, CASE WHEN im.mime_type LIKE 'video/%' THEN 'video' ELSE 'image' END),
+                    'duration', im.duration,
+                    'width', im.width,
+                    'height', im.height
+                  )
+                ) ORDER BY sm.display_order
+              )
+              FROM strand_media sm
+              INNER JOIN images im ON sm.image_id = im.id
+              WHERE sm.strand_id = s.id
+            ),
+            '[]'::json
+          ) as images
         FROM strands s
         INNER JOIN strand_group_shares sgs ON s.id = sgs.strand_id
         INNER JOIN users u ON s.user_id = u.id
@@ -186,6 +242,7 @@ export async function GET(
         width: row.width,
         height: row.height,
       } : null,
+      images: row.images && Array.isArray(row.images) && row.images.length > 0 ? row.images : undefined,
     }));
 
     return NextResponse.json({
@@ -195,7 +252,14 @@ export async function GET(
         offset,
         hasMore: strands.length === limit,
       },
-    }, { status: 200 });
+    }, { 
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
   } catch (error: any) {
     console.error('Get group strands error:', error);
     return NextResponse.json(
