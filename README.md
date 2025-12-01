@@ -39,6 +39,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Mobile Compatibility
+
+This project follows a strict mobile compatibility policy: **All features MUST be compatible with both iOS and Android devices.** Features must be tested on both platforms before being considered complete.
+
+See `MOBILE_COMPATIBILITY_RULES.md` for detailed mobile compatibility guidelines, platform-specific considerations, and implementation patterns.
+
 ## Testing
 
 This project follows a strict testing policy: **All components and modules must have tests that check their basic functions. Tests run automatically on every build.**

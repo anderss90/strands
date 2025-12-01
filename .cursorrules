@@ -1,0 +1,19 @@
+# Cursor Workspace Rules
+
+## Mobile Compatibility Requirement
+- **ALL features MUST be compatible with both iOS and Android devices**
+- When implementing new features, always consider iOS Safari and Android Chrome limitations
+- Test features on both platforms before considering them complete
+- Use platform detection when platform-specific code is needed
+- See `MOBILE_COMPATIBILITY_RULES.md` for detailed guidelines and implementation patterns
+
+## Testing Requirement
+- All components and modules MUST have tests that check their basic functions
+- Tests run automatically on every build
+- See `TESTING_RULES.md` for detailed testing guidelines
+
+## Code Quality
+- Always push changes to git if a remote has been set up
+- Check that the project builds and runs without errors
+- Always create tests for components that check all exposed APIs and basic functionality
+
