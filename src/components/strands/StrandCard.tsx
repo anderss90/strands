@@ -14,9 +14,14 @@ interface StrandCardProps {
 export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCardProps) {
   const hasImage = !!strand.imageId && strand.image; // For backward compatibility
   const hasText = !!strand.content;
-  const hasMultipleImages = strand.images && strand.images.length > 0;
-  const displayImages = hasMultipleImages && strand.images ? strand.images.slice(0, 2) : (hasImage ? [{ image: strand.image!, displayOrder: 0 }] : []);
-  const hasMoreImages = hasMultipleImages && strand.images && strand.images.length > 2;
+  // Prioritize strand.images array over single strand.image
+  // hasMultipleImages is true only if there are 2+ images
+  const hasMultipleImages = strand.images && strand.images.length > 1;
+  // Build displayImages: use images array if it exists, otherwise fall back to single image
+  const displayImages = strand.images && strand.images.length > 0 
+    ? strand.images.slice(0, 2) 
+    : (hasImage ? [{ image: strand.image!, displayOrder: 0 }] : []);
+  const hasMoreImages = strand.images && strand.images.length > 2;
   const [localFireCount, setLocalFireCount] = useState(strand.fireCount || 0);
   const [localHasUserFired, setLocalHasUserFired] = useState(strand.hasUserFired || false);
   const [firing, setFiring] = useState(false);
