@@ -30,17 +30,26 @@ export default function FullscreenZoomableImage({
   const [hasMoved, setHasMoved] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFullscreenSupported, setIsFullscreenSupported] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const lastTouchDistanceRef = useRef<number | null>(null);
   const touchHandledRef = useRef(false); // Track if touch event already handled fullscreen
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track click timeout to prevent double-click from also triggering single click
+  const fullscreenOverlayRef = useRef<HTMLDivElement>(null);
 
-  // Check if fullscreen is supported
+  // Check if we're on iOS and if fullscreen is supported
   useEffect(() => {
     const checkFullscreenSupport = () => {
+      // Detect iOS
+      const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      setIsIOS(isIOSDevice);
+
       const doc = document as any;
-      const isSupported = !!(
+      // For iOS, we'll use CSS-based fullscreen, so we consider it "supported"
+      // For other browsers, check for actual Fullscreen API support
+      const isSupported = isIOSDevice || !!(
         doc.fullscreenEnabled ||
         doc.webkitFullscreenEnabled ||
         doc.mozFullScreenEnabled ||
@@ -51,8 +60,13 @@ export default function FullscreenZoomableImage({
     checkFullscreenSupport();
   }, []);
 
-  // Listen for fullscreen changes
+  // Listen for fullscreen changes (only for non-iOS browsers)
   useEffect(() => {
+    if (isIOS) {
+      // For iOS, we handle fullscreen state manually via CSS
+      return;
+    }
+
     const handleFullscreenChange = () => {
       const isCurrentlyFullscreen = !!(
         document.fullscreenElement ||
@@ -66,6 +80,7 @@ export default function FullscreenZoomableImage({
       if (!isCurrentlyFullscreen) {
         setScale(1);
         setPosition({ x: 0, y: 0 });
+        document.body.style.overflow = '';
       }
     };
 
@@ -80,13 +95,20 @@ export default function FullscreenZoomableImage({
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
       document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
     };
-  }, []);
+  }, [isIOS]);
 
   // Reset zoom when image changes
   useEffect(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
   }, [src]);
+
+  // Cleanup body overflow when component unmounts
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -117,25 +139,59 @@ export default function FullscreenZoomableImage({
     try {
       if (!isFullscreen) {
         // Enter fullscreen
-        if (element.requestFullscreen) {
-          await element.requestFullscreen();
-        } else if ((element as any).webkitRequestFullscreen) {
-          await (element as any).webkitRequestFullscreen();
-        } else if ((element as any).mozRequestFullScreen) {
-          await (element as any).mozRequestFullScreen();
-        } else if ((element as any).msRequestFullscreen) {
-          await (element as any).msRequestFullscreen();
+        if (isIOS) {
+          // iOS doesn't support Fullscreen API for images, use CSS-based fullscreen
+          setIsFullscreen(true);
+          // Prevent body scroll when in fullscreen
+          document.body.style.overflow = 'hidden';
+          // Lock orientation if possible (though this may not work in all cases)
+          if (screen.orientation && (screen.orientation as any).lock) {
+            try {
+              await (screen.orientation as any).lock('any');
+            } catch (err) {
+              // Orientation lock may fail, ignore
+            }
+          }
+        } else {
+          // Use native Fullscreen API for other browsers
+          if (element.requestFullscreen) {
+            await element.requestFullscreen();
+          } else if ((element as any).webkitRequestFullscreen) {
+            await (element as any).webkitRequestFullscreen();
+          } else if ((element as any).mozRequestFullScreen) {
+            await (element as any).mozRequestFullScreen();
+          } else if ((element as any).msRequestFullscreen) {
+            await (element as any).msRequestFullscreen();
+          }
         }
       } else {
         // Exit fullscreen
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
-        } else if ((document as any).mozCancelFullScreen) {
-          await (document as any).mozCancelFullScreen();
-        } else if ((document as any).msExitFullscreen) {
-          await (document as any).msExitFullscreen();
+        if (isIOS) {
+          // Exit CSS-based fullscreen
+          setIsFullscreen(false);
+          document.body.style.overflow = '';
+          // Reset zoom when exiting fullscreen
+          setScale(1);
+          setPosition({ x: 0, y: 0 });
+          // Unlock orientation
+          if (screen.orientation && (screen.orientation as any).unlock) {
+            try {
+              (screen.orientation as any).unlock();
+            } catch (err) {
+              // Ignore unlock errors
+            }
+          }
+        } else {
+          // Use native Fullscreen API exit
+          if (document.exitFullscreen) {
+            await document.exitFullscreen();
+          } else if ((document as any).webkitExitFullscreen) {
+            await (document as any).webkitExitFullscreen();
+          } else if ((document as any).mozCancelFullScreen) {
+            await (document as any).mozCancelFullScreen();
+          } else if ((document as any).msExitFullscreen) {
+            await (document as any).msExitFullscreen();
+          }
         }
       }
     } catch (error: any) {
@@ -365,6 +421,115 @@ export default function FullscreenZoomableImage({
     setScale(minZoom);
     setPosition({ x: 0, y: 0 });
   };
+
+  // For iOS fullscreen, we need a wrapper overlay
+  if (isIOS && isFullscreen) {
+    return (
+      <div
+        ref={fullscreenOverlayRef}
+        className="fixed inset-0 bg-black z-[9999] flex items-center justify-center"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          minHeight: '-webkit-fill-available', // iOS Safari support
+          zIndex: 9999,
+          touchAction: 'none', // Prevent default touch behaviors
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        <div
+          ref={containerRef}
+          className="relative w-full h-full overflow-hidden touch-none"
+          style={{ 
+            cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+            touchAction: 'none',
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div
+            style={{
+              transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+              transformOrigin: '0 0',
+              transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+            }}
+            className="w-full h-full flex items-center justify-center"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imageRef}
+              src={src}
+              alt={alt}
+              className="max-w-full max-h-full object-contain select-none"
+              draggable={false}
+            />
+          </div>
+          
+          {/* Zoom Controls - only show in fullscreen */}
+          {showControls && (
+            <>
+              <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
+                <button
+                  onClick={handleZoomIn}
+                  disabled={scale >= maxZoom}
+                  className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  title="Zoom in"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleZoomOut}
+                  disabled={scale <= minZoom}
+                  className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  title="Zoom out"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleReset}
+                  disabled={scale <= minZoom}
+                  className="bg-black/70 text-white p-2 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  title="Reset zoom"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Exit fullscreen button - top right */}
+              <button
+                onClick={handleFullscreen}
+                className="absolute top-4 right-4 bg-black/70 text-white p-3 rounded-full hover:bg-black/90 active:scale-95 transition-all duration-200 z-10 flex items-center justify-center"
+                title="Exit fullscreen"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              
+              {/* Zoom indicator */}
+              {scale > minZoom && (
+                <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs z-10">
+                  {Math.round(scale * 100)}%
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
