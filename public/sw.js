@@ -10,6 +10,7 @@ const urlsToCache = [
   '/profile',
   '/icon-192x192.png',
   '/icon-512x512.png',
+  '/icon-badge-96x96.png', // Monochrome badge for Android notifications
 ];
 
 // Install event - cache resources
@@ -125,7 +126,7 @@ self.addEventListener('push', function(event) {
   
   const origin = getOrigin();
   const iconPath = data.icon || '/icon-192x192.png';
-  const badgePath = data.badge || '/icon-192x192.png';
+  const badgePath = data.badge || '/icon-badge-96x96.png';
   
   const options = {
     body: data.body || 'You have a new notification',
@@ -138,31 +139,51 @@ self.addEventListener('push', function(event) {
   };
 
   event.waitUntil(
-    // First ensure the icon is cached, then show notification
-    caches.match('/icon-192x192.png')
-      .then(function(cachedIcon) {
-        if (!cachedIcon) {
-          // Cache the icon if not already cached
-          return fetch('/icon-192x192.png')
-            .then(function(response) {
-              if (response.ok) {
-                const cache = caches.open(CACHE_NAME);
-                return cache.then(function(c) {
-                  c.put('/icon-192x192.png', response.clone());
-                  return response;
-                });
-              }
-              return response;
-            })
-            .catch(function() {
-              // If fetch fails, continue anyway
-              return null;
-            });
-        }
-        return cachedIcon;
-      })
+    // Cache both icon and badge, then show notification
+    Promise.all([
+      // Cache the main icon
+      caches.match(iconPath)
+        .then(function(cachedIcon) {
+          if (!cachedIcon) {
+            return fetch(iconPath.startsWith('http') ? iconPath : (origin + iconPath))
+              .then(function(response) {
+                if (response.ok) {
+                  return caches.open(CACHE_NAME).then(function(c) {
+                    c.put(iconPath.startsWith('http') ? iconPath : (origin + iconPath), response.clone());
+                    return response;
+                  });
+                }
+                return response;
+              })
+              .catch(function() {
+                return null;
+              });
+          }
+          return cachedIcon;
+        }),
+      // Cache the badge icon (monochrome for Android)
+      caches.match(badgePath)
+        .then(function(cachedBadge) {
+          if (!cachedBadge) {
+            return fetch(badgePath.startsWith('http') ? badgePath : (origin + badgePath))
+              .then(function(response) {
+                if (response.ok) {
+                  return caches.open(CACHE_NAME).then(function(c) {
+                    c.put(badgePath.startsWith('http') ? badgePath : (origin + badgePath), response.clone());
+                    return response;
+                  });
+                }
+                return response;
+              })
+              .catch(function() {
+                return null;
+              });
+          }
+          return cachedBadge;
+        })
+    ])
       .then(function() {
-        // Show notification with absolute URL
+        // Show notification with absolute URLs
         return self.registration.showNotification(title, options);
       })
       .catch(function(error) {

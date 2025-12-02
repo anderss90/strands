@@ -1,0 +1,9 @@
+<svg width="96" height="96" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simple monochrome badge icon - white shape on transparent background -->
+  <!-- This represents a simple "S" for Strands -->
+  <g fill="white">
+    <!-- Simple geometric shape representing the app -->
+    <path d="M48 20 C35 20, 25 30, 25 43 C25 50, 28 56, 33 60 C28 64, 25 70, 25 77 C25 90, 35 100, 48 100 C61 100, 71 90, 71 77 C71 70, 68 64, 63 60 C68 56, 71 50, 71 43 C71 30, 61 20, 48 20 Z M48 30 C56 30, 62 36, 62 43 C62 50, 56 56, 48 56 C40 56, 34 50, 34 43 C34 36, 40 30, 48 30 Z M48 66 C56 66, 62 72, 62 79 C62 86, 56 92, 48 92 C40 92, 34 86, 34 79 C34 72, 40 66, 48 66 Z"/>
+  </g>
+</svg>
+

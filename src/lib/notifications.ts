@@ -63,11 +63,12 @@ export async function notifyGroupMembers(
 
     // Prepare notification payload
     // Use relative paths - service worker will convert to absolute URLs
+    // badge must be monochrome (white/transparent) for Android status bar
     const payload = JSON.stringify({
       title: notification.title,
       body: notification.body,
-      icon: '/icon-192x192.png',
-      badge: '/icon-192x192.png',
+      icon: '/icon-192x192.png', // Full-color icon for notification drawer
+      badge: '/icon-badge-96x96.png', // Monochrome icon for Android status bar
       tag: `strands-${groupId}`,
       data: notification.data || {},
     });
@@ -158,11 +159,12 @@ export async function notifyUsers(
     }));
 
     // Prepare notification payload
+    // badge must be monochrome (white/transparent) for Android status bar
     const payload = JSON.stringify({
       title: notification.title,
       body: notification.body,
-      icon: '/icon-192x192.png',
-      badge: '/icon-192x192.png',
+      icon: '/icon-192x192.png', // Full-color icon for notification drawer
+      badge: '/icon-badge-96x96.png', // Monochrome icon for Android status bar
       tag: notification.tag || 'strands-notification',
       data: notification.data || {},
     });
