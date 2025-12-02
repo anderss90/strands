@@ -35,6 +35,17 @@ export default function EnhancedLinkText({ text, className = '' }: EnhancedLinkT
         });
       }
       
+      // Always log YouTube URLs to help debug
+      if (u.url.toLowerCase().includes('youtube')) {
+        console.log('EnhancedLinkText - YouTube URL detected:', { 
+          url: u.url, 
+          hostname,
+          isYouTube: isYT,
+          isSpotify: isSpot,
+          willRenderAsEmbed: isYT
+        });
+      }
+      
       return { url: u.url, isYouTube: isYT, isSpotify: isSpot, hostname };
     });
     
@@ -64,8 +75,13 @@ export default function EnhancedLinkText({ text, className = '' }: EnhancedLinkT
     if (isSpotifyUrl(url.url)) {
       parts.push({ type: 'spotify', url });
     } else if (isYouTubeUrl(url.url)) {
+      console.log('EnhancedLinkText - Adding YouTube embed to parts:', url.url);
       parts.push({ type: 'youtube', url });
     } else {
+      // Log if it looks like YouTube but wasn't recognized
+      if (url.url.toLowerCase().includes('youtube')) {
+        console.warn('EnhancedLinkText - YouTube URL not recognized, rendering as regular link:', url.url);
+      }
       parts.push(url);
     }
     
@@ -103,10 +119,7 @@ export default function EnhancedLinkText({ text, className = '' }: EnhancedLinkT
           } else if (part.type === 'youtube') {
             // Render YouTube embed (always show full embed, not truncated)
             const youtubeUrl = part.url;
-            // Debug logging
-            if (process.env.NODE_ENV === 'development') {
-              console.log('EnhancedLinkText - Rendering YouTube embed for URL:', youtubeUrl.url);
-            }
+            console.log('EnhancedLinkText - Rendering YouTube embed for URL:', youtubeUrl.url);
             return (
               <div key={index} className="my-3 w-full" style={{ minHeight: '200px' }}>
                 <YouTubeEmbed url={youtubeUrl.url} />
