@@ -79,7 +79,10 @@ export default function EnhancedLinkText({ text, className = '' }: EnhancedLinkT
 
   // If we have embeds, don't apply line-clamp to the container
   // Instead, apply it only to text segments
-  const containerClass = hasEmbedUrl ? className.replace('line-clamp-3', '') : className;
+  // Also ensure overflow is visible for embeds to render properly
+  const containerClass = hasEmbedUrl 
+    ? className.replace('line-clamp-3', '').trim() + ' overflow-visible'
+    : className;
 
   return (
     <div className={containerClass}>
@@ -105,7 +108,7 @@ export default function EnhancedLinkText({ text, className = '' }: EnhancedLinkT
               console.log('EnhancedLinkText - Rendering YouTube embed for URL:', youtubeUrl.url);
             }
             return (
-              <div key={index} className="my-3">
+              <div key={index} className="my-3 w-full" style={{ minHeight: '200px' }}>
                 <YouTubeEmbed url={youtubeUrl.url} />
               </div>
             );
