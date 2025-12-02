@@ -1,19 +1,21 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import Changelog from '@/components/debug/Changelog';
+import { redirectToLogin } from '@/lib/utils/authRedirect';
 
 export default function ChangelogPage() {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/login');
+      redirectToLogin(router, pathname || '/console/changelog');
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, pathname]);
 
   if (loading || !isAuthenticated) {
     return (

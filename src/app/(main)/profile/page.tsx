@@ -1,14 +1,16 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { userApi } from '@/lib/api';
+import { redirectToLogin } from '@/lib/utils/authRedirect';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, loading, logout, refreshUser } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const {
     isSupported,
     permission,
@@ -24,9 +26,9 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/login');
+      redirectToLogin(router, pathname || '/profile');
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, pathname]);
 
   useEffect(() => {
     if (user?.display_name) {

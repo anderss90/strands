@@ -2,22 +2,24 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import GroupsList from '@/components/groups/GroupsList';
 import CreateGroup from '@/components/groups/CreateGroup';
+import { redirectToLogin } from '@/lib/utils/authRedirect';
 
 export default function GroupsPage() {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [activeTab, setActiveTab] = useState<'list' | 'create'>('list');
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/login');
+      redirectToLogin(router, pathname || '/groups');
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, pathname]);
 
   if (loading || !isAuthenticated) {
     return (

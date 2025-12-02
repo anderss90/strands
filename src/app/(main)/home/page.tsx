@@ -2,22 +2,24 @@
 
 import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import StrandFeed, { StrandFeedRef } from '@/components/strands/StrandFeed';
 import StrandViewer from '@/components/strands/StrandViewer';
+import { redirectToLogin } from '@/lib/utils/authRedirect';
 
 export default function HomePage() {
   const { user, loading, isAuthenticated } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [selectedStrandId, setSelectedStrandId] = useState<string | null>(null);
   const feedRef = useRef<StrandFeedRef>(null);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/login');
+      redirectToLogin(router, pathname || '/home');
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, pathname]);
 
   // Refresh feed when page becomes visible (e.g., after returning from edit page)
   useEffect(() => {

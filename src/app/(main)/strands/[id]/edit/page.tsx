@@ -1,21 +1,23 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import StrandEdit from '@/components/strands/StrandEdit';
+import { redirectToLogin } from '@/lib/utils/authRedirect';
 
 export default function EditStrandPage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, loading } = useAuth();
   const strandId = params.id as string;
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/login');
+      redirectToLogin(router, pathname || `/strands/${strandId}/edit`);
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, pathname, strandId]);
 
   if (loading || !isAuthenticated) {
     return (

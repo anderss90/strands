@@ -1,9 +1,10 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useEffect, Suspense, useState } from 'react';
 import StrandCreate from '@/components/strands/StrandCreate';
+import { redirectToLogin } from '@/lib/utils/authRedirect';
 
 function UploadPageContent() {
   const router = useRouter();
@@ -95,12 +96,13 @@ function UploadPageContent() {
 export default function UploadPage() {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/login');
+      redirectToLogin(router, pathname || '/upload');
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, pathname]);
 
   if (loading || !isAuthenticated) {
     return (

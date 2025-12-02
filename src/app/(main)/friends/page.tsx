@@ -2,24 +2,26 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import FriendList from '@/components/friends/FriendList';
 import FriendRequests from '@/components/friends/FriendRequests';
 import AddFriend from '@/components/friends/AddFriend';
+import { redirectToLogin } from '@/lib/utils/authRedirect';
 
 type Tab = 'friends' | 'requests' | 'add';
 
 export default function FriendsPage() {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [activeTab, setActiveTab] = useState<Tab>('friends');
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/login');
+      redirectToLogin(router, pathname || '/friends');
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, pathname]);
 
   if (loading || !isAuthenticated) {
     return (

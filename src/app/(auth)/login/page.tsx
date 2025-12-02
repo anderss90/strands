@@ -19,7 +19,7 @@ function LoginPageContent() {
         </div>
 
         <div className="bg-gray-800 rounded-lg shadow-sm p-8 border border-gray-700">
-          <LoginForm inviteToken={inviteToken} />
+          <LoginForm inviteToken={inviteToken} searchParams={searchParams} />
         </div>
 
         <div className="mt-6 text-center">

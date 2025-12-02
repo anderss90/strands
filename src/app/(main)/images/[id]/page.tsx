@@ -1,21 +1,23 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import ImageViewer from '@/components/images/ImageViewer';
+import { redirectToLogin } from '@/lib/utils/authRedirect';
 
 export default function ImagePage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, loading } = useAuth();
   const imageId = params.id as string;
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/login');
+      redirectToLogin(router, pathname || `/images/${imageId}`);
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, pathname, imageId]);
 
   if (loading || !isAuthenticated) {
     return (

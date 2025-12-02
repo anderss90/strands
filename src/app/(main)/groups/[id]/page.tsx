@@ -1,21 +1,23 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import GroupDetails from '@/components/groups/GroupDetails';
+import { redirectToLogin } from '@/lib/utils/authRedirect';
 
 export default function GroupDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, loading } = useAuth();
   const groupId = params.id as string;
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/login');
+      redirectToLogin(router, pathname || `/groups/${groupId}`);
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, pathname, groupId]);
 
   if (loading || !isAuthenticated) {
     return (
