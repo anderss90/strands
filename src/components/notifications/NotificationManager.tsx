@@ -21,8 +21,6 @@ export default function NotificationManager() {
     // Register service worker with update checking
     registerServiceWorker().then((registration) => {
       if (registration) {
-        console.log('Service Worker registered:', registration);
-        
         // Check for updates immediately
         checkForServiceWorkerUpdate().then((state) => {
           if (state.hasUpdate) {
