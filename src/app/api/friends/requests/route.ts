@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/middleware';
 import { query } from '@/lib/db';
 import { sendFriendRequestSchema } from '@/lib/validation';
+import { notifyUsers } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -135,6 +136,34 @@ export async function POST(request: NextRequest) {
        RETURNING *`,
       [authUser.userId, validatedData.friendId]
     );
+
+    // Get sender's display name for notification
+    // Do this after creating the request to avoid blocking on notification
+    try {
+      const senderResult = await query(
+        `SELECT display_name, username FROM users WHERE id = $1`,
+        [authUser.userId]
+      );
+      const senderDisplayName = senderResult?.rows?.[0]?.display_name || senderResult?.rows?.[0]?.username || authUser.username || 'Someone';
+
+      // Notify the receiver about the new friend request
+      // Don't await to avoid blocking the response
+      notifyUsers(validatedData.friendId, {
+        title: 'New Friend Request',
+        body: `${senderDisplayName} sent you a friend request`,
+        tag: 'friend-request',
+        data: {
+          url: '/friends',
+          type: 'friend_request',
+        },
+      }).catch((error) => {
+        // Log but don't fail the request if notification fails
+        console.error('Failed to send friend request notification:', error);
+      });
+    } catch (notifError) {
+      // If notification setup fails, log but don't fail the request
+      console.error('Failed to set up friend request notification:', notifError);
+    }
 
     return NextResponse.json({ 
       id: result.rows[0].id,
