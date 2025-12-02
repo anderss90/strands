@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Strand, Comment } from '@/types/strand';
-import LinkText from '@/components/common/LinkText';
+import EnhancedLinkText from '@/components/common/EnhancedLinkText';
 import { strandApi } from '@/lib/api';
 
 interface StrandCardProps {
@@ -236,9 +236,9 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
               </svg>
             </div>
           )}
-          <p className={`text-gray-100 ${isTextOnly ? 'text-base leading-relaxed pl-8' : 'text-sm line-clamp-3'}`}>
-            <LinkText text={strand.content || ''} />
-          </p>
+          <div className={`text-gray-100 ${isTextOnly ? 'text-base leading-relaxed pl-8' : 'text-sm'}`}>
+            <EnhancedLinkText text={strand.content || ''} className={!isTextOnly ? 'line-clamp-3' : ''} />
+          </div>
         </div>
       )}
 
@@ -269,7 +269,7 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
                     </span>
                   </div>
                   <p className="text-gray-400 text-xs mt-0.5 break-words">
-                    <LinkText text={comment.content} />
+                    <EnhancedLinkText text={comment.content} />
                   </p>
                 </div>
               </div>

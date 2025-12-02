@@ -100,3 +100,21 @@ export function getDomain(url: string): string {
   }
 }
 
+/**
+ * Checks if a URL is a Spotify URL (track, album, playlist, artist, etc.)
+ */
+export function isSpotifyUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    return (
+      hostname === 'open.spotify.com' ||
+      hostname === 'spotify.com' ||
+      hostname === 'www.spotify.com' ||
+      hostname === 'www.open.spotify.com'
+    );
+  } catch {
+    return false;
+  }
+}
+

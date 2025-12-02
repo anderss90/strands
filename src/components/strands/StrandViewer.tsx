@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Strand } from '@/types/strand';
 import { Comment } from '@/types/comment';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import LinkText from '@/components/common/LinkText';
+import EnhancedLinkText from '@/components/common/EnhancedLinkText';
 import VideoPlayer from '@/components/media/VideoPlayer';
 import FullscreenZoomableImage from '@/components/media/FullscreenZoomableImage';
 import { strandApi } from '@/lib/api';
@@ -544,9 +544,9 @@ export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: S
           <div className="flex-shrink-0 p-4 bg-black/50 backdrop-blur-sm border-b border-white/10 text-white text-sm">
             {hasText && (
               <div className="mb-4">
-                <p className="text-white text-base leading-relaxed whitespace-pre-wrap break-words">
-                  <LinkText text={strand.content || ''} />
-                </p>
+                <div className="text-white text-base leading-relaxed whitespace-pre-wrap break-words">
+                  <EnhancedLinkText text={strand.content || ''} />
+                </div>
                 {strand.editedAt && (
                   <p className="text-gray-400 text-xs mt-2">(edited)</p>
                 )}
@@ -678,7 +678,7 @@ export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: S
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-xs mb-1">{comment.user.displayName}</p>
                             <p className="text-sm break-words text-gray-300">
-                              <LinkText text={comment.content} />
+                              <EnhancedLinkText text={comment.content} />
                             </p>
                           </div>
                           {canDeleteComment && (
