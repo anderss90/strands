@@ -57,6 +57,8 @@ export default function YouTubeEmbed({ url, className = '' }: YouTubeEmbedProps)
         width: '100%',
         maxWidth: '100%',
         margin: '0 auto',
+        position: 'relative',
+        zIndex: 1,
       }}
     >
       <div
@@ -66,6 +68,8 @@ export default function YouTubeEmbed({ url, className = '' }: YouTubeEmbedProps)
           height: 0,
           overflow: 'hidden',
           borderRadius: '12px',
+          width: '100%',
+          backgroundColor: '#000',
         }}
       >
         <iframe
@@ -77,6 +81,7 @@ export default function YouTubeEmbed({ url, className = '' }: YouTubeEmbedProps)
             width: '100%',
             height: '100%',
             border: 0,
+            display: 'block',
           }}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen

@@ -136,7 +136,16 @@ export default function EnhancedLinkText({ text, className = '' }: EnhancedLinkT
             const youtubeUrl = part.url;
             console.log('EnhancedLinkText - Rendering YouTube embed for URL:', youtubeUrl.url);
             return (
-              <div key={index} className="my-3 w-full" style={{ minHeight: '200px' }}>
+              <div 
+                key={index} 
+                className="my-3 w-full" 
+                style={{ 
+                  minHeight: '200px',
+                  width: '100%',
+                  position: 'relative',
+                  zIndex: 1,
+                }}
+              >
                 <YouTubeEmbed url={youtubeUrl.url} />
               </div>
             );

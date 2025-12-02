@@ -101,7 +101,7 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
   return (
     <div
       onClick={onClick}
-      className={`bg-gray-800 rounded-lg shadow-sm border overflow-hidden cursor-pointer hover:shadow-md active:scale-[0.98] transition-all duration-200 ${
+      className={`bg-gray-800 rounded-lg shadow-sm border ${hasEmbedUrl ? 'overflow-visible' : 'overflow-hidden'} cursor-pointer hover:shadow-md active:scale-[0.98] transition-all duration-200 ${
         isTextOnly 
           ? 'border-blue-600/50 border-2 shadow-lg shadow-blue-900/20' 
           : 'border-gray-700'
