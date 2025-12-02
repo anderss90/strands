@@ -227,3 +227,26 @@ export function extractYouTubeVideoId(url: string): string | null {
   }
 }
 
+/**
+ * Get YouTube thumbnail URL from video ID
+ * @param videoId - YouTube video ID
+ * @returns URL to the thumbnail image
+ */
+export function getYouTubeThumbnailUrl(videoId: string): string {
+  // Try maxresdefault first (highest quality, but might not exist for all videos)
+  // Fallback to hqdefault (high quality, usually exists)
+  return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+}
+
+/**
+ * Get YouTube thumbnail URL with fallback
+ * @param videoId - YouTube video ID
+ * @returns Object with primary and fallback thumbnail URLs
+ */
+export function getYouTubeThumbnailUrls(videoId: string): { primary: string; fallback: string } {
+  return {
+    primary: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+    fallback: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+  };
+}
+

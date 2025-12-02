@@ -3,13 +3,15 @@
 import { detectUrls, ParsedUrl, isSpotifyUrl, isYouTubeUrl } from '@/lib/utils/url';
 import SpotifyEmbed from './SpotifyEmbed';
 import YouTubeEmbed from './YouTubeEmbed';
+import YouTubeThumbnail from './YouTubeThumbnail';
 
 interface EnhancedLinkTextProps {
   text: string;
   className?: string;
+  showThumbnails?: boolean; // If true, show YouTube thumbnails instead of embeds (for feed view)
 }
 
-export default function EnhancedLinkText({ text, className = '' }: EnhancedLinkTextProps) {
+export default function EnhancedLinkText({ text, className = '', showThumbnails = false }: EnhancedLinkTextProps) {
   const urls = detectUrls(text);
   const hasSpotifyUrl = urls.some(url => isSpotifyUrl(url.url));
   const hasYouTubeUrl = urls.some(url => isYouTubeUrl(url.url));
@@ -132,23 +134,33 @@ export default function EnhancedLinkText({ text, className = '' }: EnhancedLinkT
               </div>
             );
           } else if (part.type === 'youtube') {
-            // Render YouTube embed (always show full embed, not truncated)
+            // Render YouTube thumbnail or embed based on showThumbnails prop
             const youtubeUrl = part.url;
-            console.log('EnhancedLinkText - Rendering YouTube embed for URL:', youtubeUrl.url);
-            return (
-              <div 
-                key={index} 
-                className="my-3 w-full" 
-                style={{ 
-                  minHeight: '200px',
-                  width: '100%',
-                  position: 'relative',
-                  zIndex: 1,
-                }}
-              >
-                <YouTubeEmbed url={youtubeUrl.url} />
-              </div>
-            );
+            if (showThumbnails) {
+              // Show thumbnail in feed view
+              return (
+                <div key={index} className="my-3 w-full">
+                  <YouTubeThumbnail url={youtubeUrl.url} />
+                </div>
+              );
+            } else {
+              // Show full embed in detail view
+              console.log('EnhancedLinkText - Rendering YouTube embed for URL:', youtubeUrl.url);
+              return (
+                <div 
+                  key={index} 
+                  className="my-3 w-full" 
+                  style={{ 
+                    minHeight: '200px',
+                    width: '100%',
+                    position: 'relative',
+                    zIndex: 1,
+                  }}
+                >
+                  <YouTubeEmbed url={youtubeUrl.url} />
+                </div>
+              );
+            }
           }
         } else {
           // Render regular link

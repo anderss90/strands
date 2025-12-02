@@ -242,7 +242,7 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
             </div>
           )}
           <div className={`text-gray-100 ${isTextOnly ? 'text-base leading-relaxed pl-8' : 'text-sm'} ${hasEmbedUrl ? 'overflow-visible' : ''}`}>
-            <EnhancedLinkText text={strand.content || ''} className={!isTextOnly ? 'line-clamp-3' : ''} />
+            <EnhancedLinkText text={strand.content || ''} className={!isTextOnly ? 'line-clamp-3' : ''} showThumbnails={true} />
           </div>
         </div>
       )}
