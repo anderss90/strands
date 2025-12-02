@@ -72,15 +72,30 @@ export default function EnhancedLinkText({ text, className = '' }: EnhancedLinkT
     }
     
     // Add URL (marked as embed type if applicable)
-    if (isSpotifyUrl(url.url)) {
-      parts.push({ type: 'spotify', url });
-    } else if (isYouTubeUrl(url.url)) {
+    // Check YouTube first since it's more common
+    const isYT = isYouTubeUrl(url.url);
+    const isSpot = isSpotifyUrl(url.url);
+    
+    if (isYT) {
       console.log('EnhancedLinkText - Adding YouTube embed to parts:', url.url);
       parts.push({ type: 'youtube', url });
+    } else if (isSpot) {
+      parts.push({ type: 'spotify', url });
     } else {
       // Log if it looks like YouTube but wasn't recognized
       if (url.url.toLowerCase().includes('youtube')) {
-        console.warn('EnhancedLinkText - YouTube URL not recognized, rendering as regular link:', url.url);
+        console.warn('EnhancedLinkText - YouTube URL not recognized, rendering as regular link:', {
+          url: url.url,
+          isYT: isYT,
+          isSpot: isSpot,
+          hostname: (() => {
+            try {
+              return new URL(url.url).hostname;
+            } catch {
+              return 'unknown';
+            }
+          })()
+        });
       }
       parts.push(url);
     }
