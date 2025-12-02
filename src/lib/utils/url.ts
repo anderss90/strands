@@ -18,9 +18,27 @@ export function detectUrls(text: string): ParsedUrl[] {
   const urls: ParsedUrl[] = [];
   const matches = Array.from(text.matchAll(URL_REGEX));
   
+  // Common trailing punctuation that should be stripped from URLs
+  // But be careful not to strip punctuation that's part of the URL (like in query params)
+  const trailingPunctuation = /[.,;:!?)\]}>'"`]+$/;
+  
   for (const match of matches) {
     let url = match[0];
     let displayUrl = url;
+    const originalMatch = url;
+    
+    // Strip trailing punctuation from URLs
+    // Only strip if it's at the very end and appears to be sentence punctuation
+    // Don't strip if it's part of the URL structure (like in query params or paths)
+    if (url.includes('://')) {
+      // For URLs with protocol, check if trailing chars are punctuation
+      // Only strip if they're clearly sentence-ending punctuation
+      const cleaned = url.replace(trailingPunctuation, '');
+      // Only use cleaned version if it's still a valid URL structure
+      if (cleaned.length < url.length && cleaned.match(/^https?:\/\/[^\s]+$/)) {
+        url = cleaned;
+      }
+    }
     
     // Add https:// if missing
     if (url.startsWith('www.')) {
@@ -50,12 +68,19 @@ export function detectUrls(text: string): ParsedUrl[] {
         displayUrl = domain + path.substring(0, maxPathLength) + '...';
       }
       
+      // Calculate end index based on the original match or the cleaned URL
+      // If we stripped trailing punctuation, adjust the end index
+      const urlLength = url.length;
+      const originalLength = originalMatch.length;
+      const strippedChars = originalLength - urlLength;
+      const endIndex = match.index! + originalLength - strippedChars;
+      
       urls.push({
         url,
         displayUrl,
         domain,
         startIndex: match.index!,
-        endIndex: match.index! + match[0].length,
+        endIndex: endIndex,
       });
     } catch (e) {
       // Invalid URL, skip
@@ -123,9 +148,19 @@ export function isSpotifyUrl(url: string): boolean {
  */
 export function isYouTubeUrl(url: string): boolean {
   try {
-    const urlObj = new URL(url);
+    // Handle URLs that might not have protocol
+    let urlToCheck = url;
+    if (!urlToCheck.match(/^https?:\/\//i)) {
+      if (urlToCheck.startsWith('www.')) {
+        urlToCheck = 'https://' + urlToCheck;
+      } else if (urlToCheck.startsWith('youtu.be') || urlToCheck.startsWith('youtube.com') || urlToCheck.startsWith('m.youtube.com')) {
+        urlToCheck = 'https://' + urlToCheck;
+      }
+    }
+    
+    const urlObj = new URL(urlToCheck);
     const hostname = urlObj.hostname.toLowerCase();
-    return (
+    const isYouTube = (
       hostname === 'youtube.com' ||
       hostname === 'www.youtube.com' ||
       hostname === 'youtu.be' ||
@@ -133,7 +168,18 @@ export function isYouTubeUrl(url: string): boolean {
       hostname === 'youtube-nocookie.com' ||
       hostname === 'www.youtube-nocookie.com'
     );
-  } catch {
+    
+    // Debug logging
+    if (process.env.NODE_ENV === 'development' && url.includes('youtube') && !isYouTube) {
+      console.log('isYouTubeUrl - URL not recognized:', { original: url, normalized: urlToCheck, hostname });
+    }
+    
+    return isYouTube;
+  } catch (error) {
+    // Debug logging
+    if (process.env.NODE_ENV === 'development' && url.includes('youtube')) {
+      console.log('isYouTubeUrl - Error parsing URL:', { url, error });
+    }
     return false;
   }
 }

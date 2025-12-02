@@ -19,6 +19,10 @@ export default function YouTubeEmbed({ url, className = '' }: YouTubeEmbedProps)
       setVideoId(id);
       setError(null);
     } else {
+      // Debug logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('YouTubeEmbed - Failed to extract video ID from URL:', url);
+      }
       setError('Invalid YouTube URL');
     }
   }, [url]);
