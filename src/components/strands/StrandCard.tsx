@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Strand, Comment } from '@/types/strand';
 import EnhancedLinkText from '@/components/common/EnhancedLinkText';
 import { strandApi } from '@/lib/api';
+import { detectUrls, isYouTubeUrl, isSpotifyUrl } from '@/lib/utils/url';
 
 interface StrandCardProps {
   strand: Strand;
@@ -92,6 +93,10 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
   };
 
   const isTextOnly = hasText && !hasImage;
+  
+  // Check if content has embed URLs (YouTube or Spotify)
+  const contentUrls = hasText ? detectUrls(strand.content || '') : [];
+  const hasEmbedUrl = contentUrls.some(url => isYouTubeUrl(url.url) || isSpotifyUrl(url.url));
 
   return (
     <div
@@ -228,7 +233,7 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
 
       {/* Third: Strand text content */}
       {hasText && (
-        <div className={`relative ${isTextOnly ? 'p-6 min-h-[120px] flex items-center' : 'px-4 pb-4 pt-4'}`}>
+        <div className={`relative ${isTextOnly ? 'p-6 min-h-[120px] flex items-center' : 'px-4 pb-4 pt-4'} ${hasEmbedUrl ? 'overflow-visible' : ''}`}>
           {isTextOnly && (
             <div className="absolute top-4 left-4 text-blue-400 opacity-50">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,7 +241,7 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
               </svg>
             </div>
           )}
-          <div className={`text-gray-100 ${isTextOnly ? 'text-base leading-relaxed pl-8' : 'text-sm'}`}>
+          <div className={`text-gray-100 ${isTextOnly ? 'text-base leading-relaxed pl-8' : 'text-sm'} ${hasEmbedUrl ? 'overflow-visible' : ''}`}>
             <EnhancedLinkText text={strand.content || ''} className={!isTextOnly ? 'line-clamp-3' : ''} />
           </div>
         </div>
