@@ -118,3 +118,66 @@ export function isSpotifyUrl(url: string): boolean {
   }
 }
 
+/**
+ * Checks if a URL is a YouTube URL
+ */
+export function isYouTubeUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    return (
+      hostname === 'youtube.com' ||
+      hostname === 'www.youtube.com' ||
+      hostname === 'youtu.be' ||
+      hostname === 'm.youtube.com' ||
+      hostname === 'youtube-nocookie.com' ||
+      hostname === 'www.youtube-nocookie.com'
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extracts YouTube video ID from various URL formats
+ * Supports:
+ * - https://www.youtube.com/watch?v=VIDEO_ID
+ * - https://youtu.be/VIDEO_ID
+ * - https://www.youtube.com/embed/VIDEO_ID
+ * - https://m.youtube.com/watch?v=VIDEO_ID
+ */
+export function extractYouTubeVideoId(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    
+    // Handle youtu.be short URLs
+    if (hostname === 'youtu.be') {
+      const videoId = urlObj.pathname.substring(1); // Remove leading slash
+      return videoId || null;
+    }
+    
+    // Handle youtube.com URLs
+    if (hostname.includes('youtube.com')) {
+      // Check for /embed/ path
+      if (urlObj.pathname.startsWith('/embed/')) {
+        return urlObj.pathname.split('/embed/')[1] || null;
+      }
+      
+      // Check for /watch?v= format
+      if (urlObj.pathname === '/watch' || urlObj.pathname === '/watch/') {
+        return urlObj.searchParams.get('v') || null;
+      }
+      
+      // Check for /v/ format
+      if (urlObj.pathname.startsWith('/v/')) {
+        return urlObj.pathname.split('/v/')[1] || null;
+      }
+    }
+    
+    return null;
+  } catch {
+    return null;
+  }
+}
+
