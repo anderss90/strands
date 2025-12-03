@@ -333,12 +333,21 @@ export async function PUT(
 
     // Handle image removal
     if (removeImage) {
-      if (!existingStrand.image_id) {
+      // Check if strand has any images (either in image_id or strand_media table)
+      const hasImageId = !!existingStrand.image_id;
+      const strandMediaCheck = await query(
+        `SELECT COUNT(*) as count FROM strand_media WHERE strand_id = $1`,
+        [strandId]
+      );
+      const hasStrandMedia = parseInt(strandMediaCheck.rows[0]?.count || '0', 10) > 0;
+      
+      if (!hasImageId && !hasStrandMedia) {
         return NextResponse.json(
           { message: 'Strand does not have an image to remove' },
           { status: 400 }
         );
       }
+      
       // Check if strand has content, otherwise it would violate the constraint
       if (!content?.trim() && !existingStrand.content) {
         return NextResponse.json(
@@ -346,7 +355,15 @@ export async function PUT(
           { status: 400 }
         );
       }
+      
+      // Remove image_id
       newImageId = null;
+      
+      // Also remove all entries from strand_media table
+      await query(
+        `DELETE FROM strand_media WHERE strand_id = $1`,
+        [strandId]
+      );
     }
 
     // Handle new image upload
