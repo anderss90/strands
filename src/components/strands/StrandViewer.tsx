@@ -35,6 +35,13 @@ export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: S
   const pathname = usePathname();
   const { user } = useAuth();
   const isHandlingBackRef = useRef(false); // Track if we're currently handling a back button press
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const dragScrollState = useRef({
+    isDragging: false,
+    startY: 0,
+    startScrollTop: 0,
+    lastY: 0,
+  });
 
   useEffect(() => {
     fetchStrand();
@@ -59,6 +66,117 @@ export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: S
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [strandId]);
+
+  // Enable drag-to-scroll on the scrollable container
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Only enable drag scroll if we're not interacting with an image that might be zoomed
+      // We'll check if the touch target is the image container or its children
+      const target = e.target as HTMLElement;
+      const isImageArea = target.closest('.fullscreen-zoomable-image-container');
+      
+      // If touching an image area, let the image component handle it
+      if (isImageArea) {
+        return;
+      }
+
+      dragScrollState.current = {
+        isDragging: true,
+        startY: e.touches[0].clientY,
+        startScrollTop: container.scrollTop,
+        lastY: e.touches[0].clientY,
+      };
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!dragScrollState.current.isDragging) return;
+
+      const currentY = e.touches[0].clientY;
+      const deltaY = dragScrollState.current.lastY - currentY;
+      
+      // Scroll the container
+      container.scrollTop = dragScrollState.current.startScrollTop + (dragScrollState.current.startY - currentY);
+      
+      dragScrollState.current.lastY = currentY;
+    };
+
+    const handleTouchEnd = () => {
+      dragScrollState.current.isDragging = false;
+    };
+
+    // Mouse events for desktop drag-to-scroll
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const isImageArea = target.closest('.fullscreen-zoomable-image-container');
+      const isButton = target.closest('button') || target.closest('a') || target.closest('textarea') || target.closest('input');
+      
+      // Don't interfere with buttons, links, inputs, or image zoom/pan
+      if (isImageArea || isButton) {
+        return;
+      }
+
+      dragScrollState.current = {
+        isDragging: true,
+        startY: e.clientY,
+        startScrollTop: container.scrollTop,
+        lastY: e.clientY,
+      };
+      
+      e.preventDefault(); // Prevent text selection
+      container.style.cursor = 'grabbing';
+      container.style.userSelect = 'none';
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragScrollState.current.isDragging) return;
+
+      const deltaY = dragScrollState.current.lastY - e.clientY;
+      container.scrollTop = dragScrollState.current.startScrollTop + (dragScrollState.current.startY - e.clientY);
+      dragScrollState.current.lastY = e.clientY;
+    };
+
+    const handleMouseUp = () => {
+      if (dragScrollState.current.isDragging) {
+        dragScrollState.current.isDragging = false;
+        container.style.cursor = '';
+        container.style.userSelect = '';
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (dragScrollState.current.isDragging) {
+        dragScrollState.current.isDragging = false;
+        container.style.cursor = '';
+        container.style.userSelect = '';
+      }
+    };
+
+    // Touch events
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd);
+    container.addEventListener('touchcancel', handleTouchEnd);
+
+    // Mouse events
+    container.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    container.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', handleTouchEnd);
+      container.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, []);
 
   // Intercept browser back button when viewing a strand
   useEffect(() => {
@@ -469,7 +587,7 @@ export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: S
       </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0">
         <div className="flex flex-col">
           {/* Image or Video (if present) */}
           {displayImages && displayImages.length > 0 && (

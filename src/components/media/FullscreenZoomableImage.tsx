@@ -534,7 +534,7 @@ export default function FullscreenZoomableImage({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full overflow-hidden touch-none ${className} ${isFullscreen ? 'bg-black' : ''}`}
+      className={`fullscreen-zoomable-image-container relative w-full h-full overflow-hidden touch-none ${className} ${isFullscreen ? 'bg-black' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
