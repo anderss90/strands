@@ -525,7 +525,7 @@ export async function POST(request: NextRequest) {
               type: 'strand',
               strandId: strand.id,
               groupId: groupId,
-              url: `/groups/${groupId}`,
+              url: `/home?strand=${strand.id}`,
             },
           }
         );

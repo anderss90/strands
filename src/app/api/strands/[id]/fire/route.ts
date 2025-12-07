@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/middleware';
 import { query } from '@/lib/db';
+import { notifyUsers } from '@/lib/notifications';
 
 // POST /api/strands/[id]/fire - Add a fire reaction to a strand
 export async function POST(
@@ -57,6 +58,18 @@ export async function POST(
       );
     }
 
+    // Get strand author info for notification
+    const strandResult = await query(
+      `SELECT s.user_id as strand_user_id, u.display_name as author_display_name
+       FROM strands s
+       INNER JOIN users u ON s.user_id = u.id
+       WHERE s.id = $1`,
+      [strandId]
+    );
+
+    const strandAuthorId = strandResult.rows[0]?.strand_user_id;
+    const authorDisplayName = strandResult.rows[0]?.author_display_name;
+
     // Add fire reaction
     await query(
       `INSERT INTO strand_fires (strand_id, user_id)
@@ -69,6 +82,30 @@ export async function POST(
       `SELECT COUNT(*)::int as count FROM strand_fires WHERE strand_id = $1`,
       [strandId]
     );
+
+    // Send notification to strand author if not the person who fired
+    if (strandAuthorId && strandAuthorId !== authUser.userId) {
+      // Get the user who fired the strand
+      const fireUserResult = await query(
+        `SELECT display_name FROM users WHERE id = $1`,
+        [authUser.userId]
+      );
+      const fireUserDisplayName = fireUserResult.rows[0]?.display_name || authUser.username;
+
+      await notifyUsers(
+        [strandAuthorId],
+        {
+          title: 'Someone fired your strand',
+          body: `${fireUserDisplayName} fired your strand`,
+          tag: `strand-fire-${strandId}`,
+          data: {
+            type: 'fire',
+            strandId: strandId,
+            url: `/home?strand=${strandId}`,
+          },
+        }
+      );
+    }
 
     return NextResponse.json(
       {

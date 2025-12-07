@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import StrandFeed, { StrandFeedRef } from '@/components/strands/StrandFeed';
 import StrandViewer from '@/components/strands/StrandViewer';
 import { redirectToLogin } from '@/lib/utils/authRedirect';
 
-export default function HomePage() {
+function HomePageContent() {
   const { user, loading, isAuthenticated } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [selectedStrandId, setSelectedStrandId] = useState<string | null>(null);
   const feedRef = useRef<StrandFeedRef>(null);
 
@@ -20,6 +21,18 @@ export default function HomePage() {
       redirectToLogin(router, pathname || '/home');
     }
   }, [loading, isAuthenticated, router, pathname]);
+
+  // Check for strand ID in query params (from notification clicks)
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      const strandIdFromQuery = searchParams.get('strand');
+      if (strandIdFromQuery && strandIdFromQuery !== selectedStrandId) {
+        setSelectedStrandId(strandIdFromQuery);
+        // Clean up URL by removing query param
+        router.replace('/home', { scroll: false });
+      }
+    }
+  }, [searchParams, loading, isAuthenticated, selectedStrandId, router]);
 
   // Refresh feed when page becomes visible (e.g., after returning from edit page)
   useEffect(() => {
@@ -78,6 +91,18 @@ export default function HomePage() {
         />
       )}
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    }>
+      <HomePageContent />
+    </Suspense>
   );
 }
 

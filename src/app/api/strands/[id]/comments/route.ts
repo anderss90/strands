@@ -215,34 +215,41 @@ export async function POST(
 
       const previousCommenterIds = previousCommentersResult.rows.map(row => row.user_id);
 
-      // Collect all users to notify (strand author + previous commenters, excluding comment author)
-      const usersToNotify: string[] = [];
-      
-      // Add strand author if not the comment author
+      // Notify strand author separately with specific message
       if (strandAuthorId !== authUser.userId) {
-        usersToNotify.push(strandAuthorId);
-      }
-
-      // Add previous commenters (excluding comment author and strand author to avoid duplicates)
-      previousCommenterIds.forEach(commenterId => {
-        if (commenterId !== authUser.userId && commenterId !== strandAuthorId && !usersToNotify.includes(commenterId)) {
-          usersToNotify.push(commenterId);
-        }
-      });
-
-      // Send notifications to strand author and previous commenters
-      if (usersToNotify.length > 0) {
         await notifyUsers(
-          usersToNotify,
+          [strandAuthorId],
           {
             title: 'New comment on your strand',
-            body: `${user.display_name} commented on a strand you ${strandAuthorId === authUser.userId ? 'created' : 'commented on'}`,
+            body: `${user.display_name} commented on your strand`,
             tag: `strand-comment-${strandId}`,
             data: {
               type: 'comment',
               strandId: strandId,
               commentId: comment.id,
-              url: `/strands/${strandId}`,
+              url: `/home?strand=${strandId}`,
+            },
+          }
+        );
+      }
+
+      // Notify previous commenters separately with different message
+      const commentersToNotify = previousCommenterIds.filter(
+        commenterId => commenterId !== authUser.userId && commenterId !== strandAuthorId
+      );
+
+      if (commentersToNotify.length > 0) {
+        await notifyUsers(
+          commentersToNotify,
+          {
+            title: 'New comment on strand',
+            body: `${user.display_name} also commented on a strand you commented on`,
+            tag: `strand-comment-${strandId}`,
+            data: {
+              type: 'comment',
+              strandId: strandId,
+              commentId: comment.id,
+              url: `/home?strand=${strandId}`,
             },
           }
         );
@@ -250,7 +257,11 @@ export async function POST(
 
       // Send notifications to all groups where this strand is shared
       // (excluding the comment author, strand author, and previous commenters to avoid duplicates)
-      const excludeUserIds = [authUser.userId, ...usersToNotify];
+      const excludeUserIds = [
+        authUser.userId,
+        strandAuthorId,
+        ...previousCommenterIds.filter(id => id !== authUser.userId && id !== strandAuthorId)
+      ];
       
       for (const groupId of groupIds) {
         // Get group name
@@ -272,7 +283,7 @@ export async function POST(
               strandId: strandId,
               commentId: comment.id,
               groupId: groupId,
-              url: `/groups/${groupId}`,
+              url: `/home?strand=${strandId}`,
             },
           }
         );
