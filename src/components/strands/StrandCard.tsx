@@ -213,20 +213,14 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
                       ref={index === 0 ? videoRef : undefined}
                       src={media.mediaUrl || media.imageUrl || ''}
                       className="w-full h-full object-cover"
-                      preload="none"
+                      preload="metadata"
                       playsInline
                       muted
                       autoPlay={false}
                       onLoadedMetadata={(e) => {
                         const video = e.currentTarget;
-                        // Set to first frame but don't seek (seeking can trigger play on iOS)
+                        // Pause after metadata loads to prevent autoplay
                         if (video.duration) {
-                          // Use requestAnimationFrame to ensure pause happens after any autoplay attempt
-                          requestAnimationFrame(() => {
-                            video.pause();
-                            video.currentTime = 0;
-                          });
-                        } else {
                           video.pause();
                           video.currentTime = 0;
                         }

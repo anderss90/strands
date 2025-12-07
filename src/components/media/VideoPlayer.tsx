@@ -37,7 +37,6 @@ export default function VideoPlayer({
     if (!video) return;
 
     // Track if user has interacted with the page
-    // Only allow autoplay after user interaction (iOS Safari requirement)
     let userInteracted = false;
 
     const handleUserInteraction = () => {
@@ -50,18 +49,29 @@ export default function VideoPlayer({
     document.addEventListener('touchstart', handleUserInteraction, { once: true });
     document.addEventListener('click', handleUserInteraction, { once: true });
 
-    // Aggressively prevent autoplay on iOS Safari
-    // iOS Safari can autoplay muted videos even when autoplay is false
+    // Prevent autoplay on iOS Safari
     if (!autoplay) {
       video.pause();
-      // Set currentTime to 0 to prevent any frame from showing
       video.currentTime = 0;
     }
 
     const handleLoadStart = () => {
       setIsLoading(true);
       setError(null);
-      // Ensure video is paused on load (iOS Safari can autoplay muted videos)
+    };
+
+    const handleLoadedMetadata = () => {
+      // Video metadata loaded - video is ready to play
+      setIsLoading(false);
+      if (!autoplay) {
+        video.pause();
+        video.currentTime = 0;
+      }
+    };
+    
+    // Also handle when video data is loaded (fired before canplay sometimes)
+    const handleLoadedData = () => {
+      setIsLoading(false);
       if (!autoplay) {
         video.pause();
         video.currentTime = 0;
@@ -69,6 +79,7 @@ export default function VideoPlayer({
     };
 
     const handleCanPlay = () => {
+      // Video can play - ensure loading is false
       setIsLoading(false);
       // Explicitly pause if autoplay is disabled (iOS Safari workaround)
       if (!autoplay) {
@@ -77,17 +88,11 @@ export default function VideoPlayer({
       }
     };
 
-    const handlePlay = (e: Event) => {
-      // If autoplay is disabled and video tries to play before user interaction, pause it
-      // This catches iOS Safari's aggressive autoplay behavior
-      if (!autoplay && !userInteracted && !video.paused) {
-        e.preventDefault();
-        e.stopPropagation();
-        video.pause();
-        video.currentTime = 0;
-        return;
-      }
+    const handlePlay = () => {
+      // Allow playback - if user clicked play, they want to watch
+      // Only prevent autoplay, not user-initiated playback
       setIsPlaying(true);
+      setIsLoading(false); // Video is playing, no longer loading
       onPlay?.();
     };
 
@@ -107,22 +112,39 @@ export default function VideoPlayer({
       console.error('Video error:', video.error);
     };
 
+    // Track clicks on video to mark user interaction
+    const handleVideoClick = () => {
+      userInteracted = true;
+    };
+    
     video.addEventListener('loadstart', handleLoadStart);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('loadeddata', handleLoadedData);
     video.addEventListener('canplay', handleCanPlay);
-    video.addEventListener('play', handlePlay, true); // Use capture phase to catch early
+    video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
     video.addEventListener('ended', handleEnded);
     video.addEventListener('error', handleError);
+    video.addEventListener('click', handleVideoClick);
+    
+    // Set initial loading state based on video readyState
+    // If video already has data loaded, don't show loading spinner
+    if (video.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+      setIsLoading(false);
+    }
 
     return () => {
       document.removeEventListener('touchstart', handleUserInteraction);
       document.removeEventListener('click', handleUserInteraction);
       video.removeEventListener('loadstart', handleLoadStart);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('loadeddata', handleLoadedData);
       video.removeEventListener('canplay', handleCanPlay);
-      video.removeEventListener('play', handlePlay, true);
+      video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('ended', handleEnded);
       video.removeEventListener('error', handleError);
+      video.removeEventListener('click', handleVideoClick);
     };
   }, [onPlay, onPause, onEnded, autoplay]);
 
@@ -137,8 +159,15 @@ export default function VideoPlayer({
         loop={loop}
         muted={muted}
         playsInline // Required for iOS to play inline
-        preload="none" // Use "none" instead of "metadata" to prevent iOS from loading and potentially autoplaying
+        preload="metadata" // Load metadata so video can be played when user clicks
         className="w-full h-auto max-h-96 object-contain rounded-lg"
+        onLoadedMetadata={() => {
+          // Ensure video is paused after metadata loads (prevents autoplay)
+          if (!autoplay && videoRef.current) {
+            videoRef.current.pause();
+            videoRef.current.currentTime = 0;
+          }
+        }}
       >
         Your browser does not support the video tag.
       </video>
