@@ -36,12 +36,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse and validate group IDs
+    // Note: groupIds are optional for metadata endpoint since sharing happens via strands
     let groupIds: string[] = [];
     if (groupIdsJson) {
       try {
         groupIds = Array.isArray(groupIdsJson) ? groupIdsJson : JSON.parse(groupIdsJson);
-        const validatedData = uploadImageSchema.parse({ groupIds });
-        groupIds = validatedData.groupIds;
+        // Only validate if groupIds are provided and not empty
+        if (groupIds.length > 0) {
+          const validatedData = uploadImageSchema.parse({ groupIds });
+          groupIds = validatedData.groupIds;
+        }
       } catch (error: any) {
         if (error.name === 'ZodError') {
           return NextResponse.json(
