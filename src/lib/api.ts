@@ -634,14 +634,17 @@ export const strandApi = {
   },
 
   // Comments API
-  getStrandComments: async (strandId: string) => {
-    return apiRequest<{ comments: StrandComment[] }>(`/api/strands/${strandId}/comments`);
+  getStrandComments: async (strandId: string, groupId?: string) => {
+    const url = groupId 
+      ? `/api/strands/${strandId}/comments?groupId=${groupId}`
+      : `/api/strands/${strandId}/comments`;
+    return apiRequest<{ comments: StrandComment[] }>(url);
   },
 
-  createStrandComment: async (strandId: string, content: string) => {
+  createStrandComment: async (strandId: string, content: string, groupId?: string) => {
     return apiRequest<StrandComment>(`/api/strands/${strandId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, groupId }),
     });
   },
 

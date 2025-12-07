@@ -24,6 +24,8 @@ export async function GET(
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
     const strandId = params.id;
+    const { searchParams } = new URL(request.url);
+    const groupId = searchParams.get('groupId');
 
     // If not admin, verify user has access to the strand
     if (!authUser.isAdmin) {
@@ -45,23 +47,87 @@ export async function GET(
       }
     }
 
-    // Get all comments for the strand, ordered by created_at ASC (oldest first)
-    const commentsResult = await query(
-      `SELECT 
+    // Build query based on groupId parameter
+    let commentsQuery: string;
+    let queryParams: any[];
+
+    if (groupId) {
+      // If groupId provided: show comments for that group + legacy comments (group_id IS NULL)
+      // Also verify user is a member of the group
+      if (!authUser.isAdmin) {
+        const membershipCheck = await query(
+          `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`,
+          [groupId, authUser.userId]
+        );
+        if (membershipCheck.rows.length === 0) {
+          return NextResponse.json(
+            { message: 'Access denied to this group' },
+            { status: 403 }
+          );
+        }
+      }
+
+      commentsQuery = `SELECT 
         c.id,
         c.strand_id,
         c.user_id,
         c.content,
         c.created_at,
+        c.group_id,
         u.username,
         u.display_name,
         u.profile_picture_url
       FROM strand_comments c
       INNER JOIN users u ON c.user_id = u.id
-      WHERE c.strand_id = $1
-      ORDER BY c.created_at ASC`,
-      [strandId]
-    );
+      WHERE c.strand_id = $1 AND (c.group_id = $2 OR c.group_id IS NULL)
+      ORDER BY c.created_at ASC`;
+      queryParams = [strandId, groupId];
+    } else {
+      // If no groupId (home feed): show comments from all groups user is a member of + legacy comments
+      if (authUser.isAdmin) {
+        // Admin sees all comments
+        commentsQuery = `SELECT 
+          c.id,
+          c.strand_id,
+          c.user_id,
+          c.content,
+          c.created_at,
+          c.group_id,
+          u.username,
+          u.display_name,
+          u.profile_picture_url
+        FROM strand_comments c
+        INNER JOIN users u ON c.user_id = u.id
+        WHERE c.strand_id = $1
+        ORDER BY c.created_at ASC`;
+        queryParams = [strandId];
+      } else {
+        // Regular users see comments from their groups + legacy comments
+        commentsQuery = `SELECT 
+          c.id,
+          c.strand_id,
+          c.user_id,
+          c.content,
+          c.created_at,
+          c.group_id,
+          u.username,
+          u.display_name,
+          u.profile_picture_url
+        FROM strand_comments c
+        INNER JOIN users u ON c.user_id = u.id
+        WHERE c.strand_id = $1 
+          AND (c.group_id IS NULL OR c.group_id IN (
+            SELECT sgs.group_id 
+            FROM strand_group_shares sgs
+            INNER JOIN group_members gm ON sgs.group_id = gm.group_id
+            WHERE sgs.strand_id = $1 AND gm.user_id = $2
+          ))
+        ORDER BY c.created_at ASC`;
+        queryParams = [strandId, authUser.userId];
+      }
+    }
+
+    const commentsResult = await query(commentsQuery, queryParams);
 
     const comments = commentsResult.rows.map(row => ({
       id: row.id,
@@ -69,6 +135,7 @@ export async function GET(
       userId: row.user_id,
       content: row.content,
       createdAt: row.created_at,
+      groupId: row.group_id || undefined,
       user: {
         id: row.user_id,
         username: row.username,
@@ -139,7 +206,7 @@ export async function POST(
         { status: 400 }
       );
     }
-    const { content } = body;
+    const { content, groupId } = body;
 
     // Validate content
     if (!content || typeof content !== 'string') {
@@ -164,17 +231,59 @@ export async function POST(
       );
     }
 
+    // Validate groupId if provided
+    let validatedGroupId: string | null = null;
+    if (groupId) {
+      if (typeof groupId !== 'string') {
+        return NextResponse.json(
+          { message: 'Invalid groupId format' },
+          { status: 400 }
+        );
+      }
+
+      // Verify strand is shared to this group
+      const strandGroupCheck = await query(
+        `SELECT 1 FROM strand_group_shares WHERE strand_id = $1 AND group_id = $2`,
+        [strandId, groupId]
+      );
+
+      if (strandGroupCheck.rows.length === 0) {
+        return NextResponse.json(
+          { message: 'Strand is not shared to this group' },
+          { status: 400 }
+        );
+      }
+
+      // Verify user is a member of the group (if not admin)
+      if (!authUser.isAdmin) {
+        const membershipCheck = await query(
+          `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`,
+          [groupId, authUser.userId]
+        );
+
+        if (membershipCheck.rows.length === 0) {
+          return NextResponse.json(
+            { message: 'You are not a member of this group' },
+            { status: 403 }
+          );
+        }
+      }
+
+      validatedGroupId = groupId;
+    }
+
     // Create comment
     const commentResult = await query(
-      `INSERT INTO strand_comments (strand_id, user_id, content)
-       VALUES ($1, $2, $3)
+      `INSERT INTO strand_comments (strand_id, user_id, content, group_id)
+       VALUES ($1, $2, $3, $4)
        RETURNING 
          id,
          strand_id,
          user_id,
          content,
+         group_id,
          created_at`,
-      [strandId, authUser.userId, trimmedContent]
+      [strandId, authUser.userId, trimmedContent, validatedGroupId]
     );
 
     const comment = commentResult.rows[0];
@@ -205,12 +314,20 @@ export async function POST(
       const strandAuthorId = strand.strand_user_id;
       const groupIds = strand.group_ids || [];
 
-      // Get all users who have commented on this strand (excluding the current comment author)
+      // Get all users who have commented on this strand in the same group context
+      // (excluding the current comment author)
+      const previousCommentersQuery = validatedGroupId
+        ? `SELECT DISTINCT user_id
+           FROM strand_comments
+           WHERE strand_id = $1 AND user_id != $2 
+             AND (group_id = $3 OR group_id IS NULL)`
+        : `SELECT DISTINCT user_id
+           FROM strand_comments
+           WHERE strand_id = $1 AND user_id != $2`;
+      
       const previousCommentersResult = await query(
-        `SELECT DISTINCT user_id
-         FROM strand_comments
-         WHERE strand_id = $1 AND user_id != $2`,
-        [strandId, authUser.userId]
+        previousCommentersQuery,
+        validatedGroupId ? [strandId, authUser.userId, validatedGroupId] : [strandId, authUser.userId]
       );
 
       const previousCommenterIds = previousCommentersResult.rows.map(row => row.user_id);
@@ -255,25 +372,28 @@ export async function POST(
         );
       }
 
-      // Send notifications to all groups where this strand is shared
-      // (excluding the comment author, strand author, and previous commenters to avoid duplicates)
+      // Send notifications to groups where this strand is shared
+      // If groupId is provided, only notify that specific group
+      // Otherwise, notify all groups
       const excludeUserIds = [
         authUser.userId,
         strandAuthorId,
         ...previousCommenterIds.filter(id => id !== authUser.userId && id !== strandAuthorId)
       ];
       
-      for (const groupId of groupIds) {
+      const groupsToNotify = validatedGroupId ? [validatedGroupId] : groupIds;
+      
+      for (const notifyGroupId of groupsToNotify) {
         // Get group name
         const groupResult = await query(
           `SELECT name FROM groups WHERE id = $1`,
-          [groupId]
+          [notifyGroupId]
         );
         const groupName = groupResult.rows[0]?.name || 'a group';
 
         // Send notification to all group members except those already notified
         await notifyGroupMembers(
-          groupId,
+          notifyGroupId,
           excludeUserIds,
           {
             title: 'New comment in ' + groupName,
@@ -282,8 +402,8 @@ export async function POST(
               type: 'comment',
               strandId: strandId,
               commentId: comment.id,
-              groupId: groupId,
-              url: `/home?strand=${strandId}`,
+              groupId: notifyGroupId,
+              url: validatedGroupId ? `/groups/${validatedGroupId}` : `/home?strand=${strandId}`,
             },
           }
         );
@@ -297,6 +417,7 @@ export async function POST(
         userId: comment.user_id,
         content: comment.content,
         createdAt: comment.created_at,
+        groupId: comment.group_id || undefined,
         user: {
           id: user.id,
           username: user.username,

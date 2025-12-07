@@ -274,6 +274,7 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
       {selectedStrandId && (
         <StrandViewer
           strandId={selectedStrandId}
+          groupId={groupId}
           onClose={() => setSelectedStrandId(null)}
           onRefresh={() => {
             feedRef.current?.refresh();

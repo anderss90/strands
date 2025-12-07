@@ -14,12 +14,13 @@ import { formatDateTime } from '@/lib/utils/dateFormat';
 
 interface StrandViewerProps {
   strandId: string;
+  groupId?: string; // Optional group ID for group-specific comments
   onClose?: () => void;
   onEdit?: () => void;
   onRefresh?: () => void;
 }
 
-export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: StrandViewerProps) {
+export default function StrandViewer({ strandId, groupId, onClose, onEdit, onRefresh }: StrandViewerProps) {
   const [strand, setStrand] = useState<Strand | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -47,7 +48,7 @@ export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: S
     fetchStrand();
     fetchComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [strandId]);
+  }, [strandId, groupId]);
 
   // Refresh strand data when page becomes visible (e.g., after returning from edit page)
   useEffect(() => {
@@ -257,18 +258,9 @@ export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: S
         return;
       }
       
-      const response = await fetch(`/api/strands/${strandId}/comments`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load comments');
-      }
-
-      const data = await response.json();
-      setComments(data.comments);
+      // Use API client to support groupId parameter
+      const commentsData = await strandApi.getStrandComments(strandId, groupId);
+      setComments(commentsData.comments);
     } catch (err: any) {
       console.error('Failed to load comments:', err);
     } finally {
@@ -283,31 +275,20 @@ export default function StrandViewer({ strandId, onClose, onEdit, onRefresh }: S
     try {
       setSubmittingComment(true);
       
-      // Safely get token from localStorage
-      let token: string | null = null;
-      try {
-        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-      } catch (error) {
-        alert('Unable to access storage. Please check your browser settings.');
-        return;
-      }
+      // Use API client to support groupId parameter
+      await strandApi.createStrandComment(strandId, commentText.trim(), groupId);
       
-      const response = await fetch(`/api/strands/${strandId}/comments`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content: commentText.trim() }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to post comment');
-      }
-
-      const newComment = await response.json();
-      setComments(prev => [...prev, newComment]);
+      // Clear comment text and refresh comments
       setCommentText('');
+      await fetchComments();
+      
+      // Refresh strand to update comment count if needed
+      await fetchStrand();
+      
+      // Trigger refresh callback if provided
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (err: any) {
       alert(err.message || 'Failed to post comment');
     } finally {

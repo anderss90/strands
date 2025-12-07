@@ -5,6 +5,7 @@ export interface Comment {
   userId: string;
   content: string;
   createdAt: string;
+  groupId?: string; // Optional group ID for group-specific comments
   user: {
     id: string;
     username: string;
