@@ -145,8 +145,8 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
       }`}
     >
       {/* First row: User name + Fire button */}
-      <div className="px-4 pt-4 pb-3">
-        <div className="flex items-center justify-between">
+      <div className="pt-4 pb-3">
+        <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {strand.user?.profilePictureUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -280,7 +280,7 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
 
       {/* Third: Strand text content */}
       {hasText && (
-        <div className={`relative ${isTextOnly ? 'p-6 min-h-[120px] flex items-center' : 'px-4 pb-4 pt-4'} ${hasEmbedUrl ? 'overflow-visible' : ''}`}>
+        <div className={`relative ${isTextOnly ? 'p-6 min-h-[120px] flex items-center' : 'pb-4 pt-4 px-2'} ${hasEmbedUrl ? 'overflow-visible' : ''}`}>
           {isTextOnly && (
             <div className="absolute top-4 left-4 text-blue-400 opacity-50">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -296,8 +296,8 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
 
       {/* Comments section */}
       {comments.length > 0 && (
-        <div className="px-4 pb-3 border-t border-gray-700">
-          <div className="pt-3 space-y-2">
+        <div className="pb-3 border-t border-gray-700">
+          <div className="pt-3 space-y-2 px-2">
             {comments.slice(0, 3).map((comment) => (
               <div key={comment.id} className="flex items-start gap-2">
                 {comment.user?.profilePictureUrl ? (
@@ -343,8 +343,8 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
 
       {/* Footer with edit indicator */}
       {strand.editedAt && (
-        <div className="px-4 pb-4 pt-2 border-t border-gray-700">
-          <div className="flex items-center justify-end">
+        <div className="pb-4 pt-2 border-t border-gray-700">
+          <div className="flex items-center justify-end px-2">
             <span className="text-gray-500 text-xs">Edited</span>
           </div>
         </div>

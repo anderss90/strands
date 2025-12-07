@@ -73,7 +73,7 @@ function HomePageContent() {
           <p className="text-gray-400 text-sm">Your strand feed from all groups.</p>
         </div>
 
-        <div className="bg-gray-800 rounded-lg shadow-sm px-4 py-4 animate-slide-up border border-gray-700">
+        <div className="bg-gray-800 rounded-lg shadow-sm py-4 animate-slide-up border border-gray-700">
           <StrandFeed 
             ref={feedRef}
             onStrandClick={(strandId) => setSelectedStrandId(strandId)} 
