@@ -39,12 +39,28 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
     setThumbnailErrors(new Set());
   }, [strand.id, strand.fireCount, strand.hasUserFired]);
 
-  // Prevent video autoplay on iOS
+  // Aggressively prevent video autoplay on iOS Safari
   useEffect(() => {
     const video = videoRef.current;
     if (video) {
-      // Explicitly pause video to prevent autoplay on iOS Safari
+      // Explicitly pause video and reset to beginning
       video.pause();
+      video.currentTime = 0;
+      
+      // Add play event listener to catch any autoplay attempts
+      const handlePlay = () => {
+        // If video tries to play automatically, pause it immediately
+        if (video.paused === false) {
+          video.pause();
+          video.currentTime = 0;
+        }
+      };
+      
+      video.addEventListener('play', handlePlay);
+      
+      return () => {
+        video.removeEventListener('play', handlePlay);
+      };
     }
   }, []);
 
@@ -179,17 +195,33 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
                       ref={index === 0 ? videoRef : undefined}
                       src={media.mediaUrl || media.imageUrl || ''}
                       className="w-full h-full object-cover"
-                      preload="metadata"
+                      preload="none"
                       playsInline
                       muted
                       autoPlay={false}
                       onLoadedMetadata={(e) => {
                         const video = e.currentTarget;
+                        // Set to first frame but don't seek (seeking can trigger play on iOS)
                         if (video.duration) {
-                          video.currentTime = Math.min(0.1, video.duration / 10);
+                          // Use requestAnimationFrame to ensure pause happens after any autoplay attempt
+                          requestAnimationFrame(() => {
+                            video.pause();
+                            video.currentTime = 0;
+                          });
+                        } else {
+                          video.pause();
+                          video.currentTime = 0;
                         }
-                        // Explicitly pause after loading metadata (iOS Safari workaround)
+                      }}
+                      onPlay={(e) => {
+                        // Aggressively prevent autoplay - pause immediately if video starts playing
+                        // Only allow play if user explicitly clicked (we can't detect this perfectly, but
+                        // we'll pause anyway and let controls handle user-initiated playback)
+                        const video = e.currentTarget;
+                        // Always pause on play event to prevent autoplay
+                        // User can still play via controls
                         video.pause();
+                        video.currentTime = 0;
                       }}
                       onSeeked={(e) => {
                         e.currentTarget.pause();

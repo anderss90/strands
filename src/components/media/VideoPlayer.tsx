@@ -36,9 +36,12 @@ export default function VideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
-    // Explicitly prevent autoplay on iOS
+    // Aggressively prevent autoplay on iOS Safari
+    // iOS Safari can autoplay muted videos even when autoplay is false
     if (!autoplay) {
       video.pause();
+      // Set currentTime to 0 to prevent any frame from showing
+      video.currentTime = 0;
     }
 
     const handleLoadStart = () => {
@@ -47,6 +50,7 @@ export default function VideoPlayer({
       // Ensure video is paused on load (iOS Safari can autoplay muted videos)
       if (!autoplay) {
         video.pause();
+        video.currentTime = 0;
       }
     };
 
@@ -55,10 +59,18 @@ export default function VideoPlayer({
       // Explicitly pause if autoplay is disabled (iOS Safari workaround)
       if (!autoplay) {
         video.pause();
+        video.currentTime = 0;
       }
     };
 
     const handlePlay = () => {
+      // If autoplay is disabled and video starts playing, immediately pause it
+      // This catches iOS Safari's aggressive autoplay behavior
+      if (!autoplay && video.paused === false) {
+        video.pause();
+        video.currentTime = 0;
+        return;
+      }
       setIsPlaying(true);
       onPlay?.();
     };
@@ -107,7 +119,7 @@ export default function VideoPlayer({
         loop={loop}
         muted={muted}
         playsInline // Required for iOS to play inline
-        preload="metadata"
+        preload="none" // Use "none" instead of "metadata" to prevent iOS from loading and potentially autoplaying
         className="w-full h-auto max-h-96 object-contain rounded-lg"
       >
         Your browser does not support the video tag.
