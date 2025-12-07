@@ -255,14 +255,12 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
             </div>
           </div>
         ) : (
-          <div className="-mx-4">
-            <StrandFeed
-              ref={feedRef}
-              groupId={groupId}
-              pinnedOnly={activeTab === 'pinned'}
-              onStrandClick={(strandId) => setSelectedStrandId(strandId)}
-            />
-          </div>
+          <StrandFeed
+            ref={feedRef}
+            groupId={groupId}
+            pinnedOnly={activeTab === 'pinned'}
+            onStrandClick={(strandId) => setSelectedStrandId(strandId)}
+          />
         )}
       </div>
 
