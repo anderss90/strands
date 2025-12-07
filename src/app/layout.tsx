@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Strands",
   },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
   formatDetection: {
     telephone: false,
   },
