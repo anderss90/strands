@@ -10,7 +10,7 @@ export interface StrandMedia {
     fileName: string;
     fileSize: number;
     mimeType: string;
-    mediaType?: 'image' | 'video';
+    mediaType?: 'image' | 'video' | 'audio';
     duration?: number;
     width?: number;
     height?: number;
@@ -42,7 +42,7 @@ export interface Strand {
     fileName: string;
     fileSize: number;
     mimeType: string;
-    mediaType?: 'image' | 'video';
+    mediaType?: 'image' | 'video' | 'audio';
     duration?: number;
     width?: number;
     height?: number;
