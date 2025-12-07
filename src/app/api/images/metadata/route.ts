@@ -26,7 +26,18 @@ export async function POST(request: NextRequest) {
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
     
     const body = await request.json();
-    const { imageUrl, thumbnailUrl, fileName, fileSize, mimeType, groupIds: groupIdsJson } = body;
+    const { 
+      imageUrl, 
+      thumbnailUrl, 
+      fileName, 
+      fileSize, 
+      mimeType, 
+      mediaType,
+      duration,
+      width,
+      height,
+      groupIds: groupIdsJson 
+    } = body;
 
     if (!imageUrl) {
       return NextResponse.json(
@@ -92,10 +103,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Determine media type from mimeType if not provided
+    const finalMediaType = mediaType || (mimeType?.startsWith('video/') ? 'video' : 'image');
+    
     // Save image metadata to database
     const imageResult = await query(
-      `INSERT INTO images (user_id, image_url, thumbnail_url, file_name, file_size, mime_type)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO images (user_id, image_url, thumbnail_url, file_name, file_size, mime_type, media_type, duration, width, height)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         authUser.userId,
@@ -104,6 +118,10 @@ export async function POST(request: NextRequest) {
         fileName || 'uploaded-image',
         fileSize || 0,
         mimeType || 'image/jpeg',
+        finalMediaType,
+        duration || null,
+        width || null,
+        height || null,
       ]
     );
 
@@ -130,6 +148,10 @@ export async function POST(request: NextRequest) {
         fileName: image.file_name,
         fileSize: image.file_size,
         mimeType: image.mime_type,
+        mediaType: image.media_type,
+        duration: image.duration,
+        width: image.width,
+        height: image.height,
         createdAt: image.created_at,
         groupIds,
       },

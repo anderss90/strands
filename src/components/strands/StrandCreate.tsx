@@ -361,6 +361,39 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
               },
             });
             
+            // Generate and upload thumbnail for videos
+            let thumbnailUrl = uploadResult.publicUrl; // Default to video URL
+            const isVideo = files[i]?.isVideo;
+            
+            if (isVideo) {
+              try {
+                // Generate thumbnail from video
+                const thumbnailBlob = await generateVideoThumbnail(file);
+                
+                // Convert blob to File for upload
+                const thumbnailFile = new File([thumbnailBlob], `thumbnail-${file.name.replace(/\.[^/.]+$/, '')}.jpg`, {
+                  type: 'image/jpeg',
+                });
+                
+                // Upload thumbnail to Supabase Storage
+                const thumbnailUploadResult = await directUploadToSupabase({
+                  file: thumbnailFile,
+                  userId: user.id,
+                  bucket: 'images',
+                });
+                
+                thumbnailUrl = thumbnailUploadResult.publicUrl;
+                console.log('Video thumbnail generated and uploaded successfully');
+              } catch (thumbnailError) {
+                console.warn('Failed to generate video thumbnail, using video URL as fallback:', thumbnailError);
+                // Continue with video URL as thumbnail (fallback)
+                thumbnailUrl = uploadResult.publicUrl;
+              }
+            }
+            
+            // Get video metadata if available
+            const videoMetadata = files[i]?.videoMetadata;
+            
             // Save metadata to database to get image ID
             const metadataResponse = await fetch('/api/images/metadata', {
               method: 'POST',
@@ -370,10 +403,14 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
               },
               body: JSON.stringify({
                 imageUrl: uploadResult.publicUrl,
-                thumbnailUrl: uploadResult.publicUrl,
+                thumbnailUrl: thumbnailUrl,
                 fileName: file.name,
                 fileSize: file.size,
-                mimeType: file.type || (files[i]?.isVideo ? 'video/mp4' : 'image/jpeg'),
+                mimeType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
+                mediaType: isVideo ? 'video' : 'image',
+                duration: videoMetadata?.duration || null,
+                width: videoMetadata?.width || null,
+                height: videoMetadata?.height || null,
                 groupIds: [], // We'll share via strand, not directly
               }),
             });
