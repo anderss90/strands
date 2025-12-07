@@ -37,6 +37,8 @@ export default function FullscreenZoomableImage({
   const touchHandledRef = useRef(false); // Track if touch event already handled fullscreen
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track click timeout to prevent double-click from also triggering single click
   const fullscreenOverlayRef = useRef<HTMLDivElement>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null); // Track initial touch position for drag distance
+  const touchMoveDistanceRef = useRef(0); // Track total movement distance during touch
 
   // Check if we're on iOS and if fullscreen is supported
   useEffect(() => {
@@ -203,29 +205,54 @@ export default function FullscreenZoomableImage({
     if (e.touches.length === 1) {
       // Single touch - prepare for drag or double tap
       const touch = e.touches[0];
+      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+      touchMoveDistanceRef.current = 0;
+      
+      // Only handle dragging if zoomed in
       if (scale > 1) {
         setIsDragging(true);
         setDragStart({
           x: touch.clientX - position.x,
           y: touch.clientY - position.y,
         });
+        // Prevent default to allow panning when zoomed
+        e.preventDefault();
       }
+      // When scale === 1, don't prevent default to allow page scrolling
     } else if (e.touches.length === 2) {
       // Two touches - pinch zoom
       setIsDragging(false);
+      touchStartPosRef.current = null;
+      touchMoveDistanceRef.current = 0;
       const distance = getDistance(e.touches[0], e.touches[1]);
       lastTouchDistanceRef.current = distance;
+      // Always prevent default for pinch zoom
+      e.preventDefault();
     }
   };
 
   const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 1 && isDragging && scale > 1) {
-      // Single touch drag when zoomed
+    if (e.touches.length === 1) {
       const touch = e.touches[0];
-      setPosition({
-        x: touch.clientX - dragStart.x,
-        y: touch.clientY - dragStart.y,
-      });
+      
+      // Track movement distance for tap detection
+      if (touchStartPosRef.current) {
+        const dx = touch.clientX - touchStartPosRef.current.x;
+        const dy = touch.clientY - touchStartPosRef.current.y;
+        touchMoveDistanceRef.current = Math.sqrt(dx * dx + dy * dy);
+      }
+      
+      if (isDragging && scale > 1) {
+        // Single touch drag when zoomed
+        setPosition({
+          x: touch.clientX - dragStart.x,
+          y: touch.clientY - dragStart.y,
+        });
+        e.preventDefault();
+      } else if (scale === 1) {
+        // When not zoomed, allow page scrolling - don't prevent default
+        // Let the event bubble up to parent scroll container
+      }
     } else if (e.touches.length === 2) {
       // Pinch zoom
       const distance = getDistance(e.touches[0], e.touches[1]);
@@ -251,6 +278,7 @@ export default function FullscreenZoomableImage({
         }
         lastTouchDistanceRef.current = distance;
       }
+      e.preventDefault();
     }
   };
 
@@ -260,13 +288,17 @@ export default function FullscreenZoomableImage({
       lastTouchDistanceRef.current = null;
     }
     
-    // Handle single tap and double tap for fullscreen toggle
+    // Only handle double tap for fullscreen toggle (removed single tap)
+    // Only trigger if movement was minimal (less than 10px) to distinguish from scroll
     if (e.touches.length === 0 && e.changedTouches.length === 1) {
       const now = Date.now();
       const tapDelay = now - lastTap;
       setLastTap(now);
 
-      if (tapDelay < 300 && tapDelay > 0) {
+      // Only trigger double tap if movement was minimal (less than 10px threshold)
+      const wasMinimalMovement = touchMoveDistanceRef.current < 10;
+
+      if (tapDelay < 300 && tapDelay > 0 && wasMinimalMovement) {
         // Double tap detected - toggle fullscreen
         touchHandledRef.current = true;
         // Clear any pending click timeout
@@ -279,18 +311,13 @@ export default function FullscreenZoomableImage({
         setTimeout(() => {
           touchHandledRef.current = false;
         }, 300);
-      } else if (tapDelay >= 300 || tapDelay === 0) {
-        // Single tap - toggle fullscreen if not dragging
-        if (!isDragging) {
-          touchHandledRef.current = true;
-          handleFullscreen();
-          // Reset touch handled flag after a delay to prevent click event from firing
-          setTimeout(() => {
-            touchHandledRef.current = false;
-          }, 300);
-        }
       }
+      // Removed single tap fullscreen toggle - users can use double tap or button
     }
+    
+    // Reset touch tracking
+    touchStartPosRef.current = null;
+    touchMoveDistanceRef.current = 0;
   };
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
@@ -358,16 +385,11 @@ export default function FullscreenZoomableImage({
       return;
     }
     
-    // Toggle fullscreen on single click if:
-    // - Mouse hasn't moved (wasn't a drag)
-    // - Not currently dragging
-    if (!hasMoved && !isDragging) {
-      e.stopPropagation();
-      // Delay to check if this is part of a double click
-      clickTimeoutRef.current = setTimeout(() => {
-        handleFullscreen();
-        clickTimeoutRef.current = null;
-      }, 200);
+    // Removed single click fullscreen toggle - users can use double click or button
+    // Only clear timeout if it exists (for double click handling)
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
     }
   };
 
@@ -534,7 +556,7 @@ export default function FullscreenZoomableImage({
   return (
     <div
       ref={containerRef}
-      className={`fullscreen-zoomable-image-container relative w-full h-full overflow-hidden touch-none ${className} ${isFullscreen ? 'bg-black' : ''}`}
+      className={`fullscreen-zoomable-image-container relative w-full h-full overflow-hidden ${className} ${isFullscreen ? 'bg-black' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -546,7 +568,9 @@ export default function FullscreenZoomableImage({
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       style={{ 
-        cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+        cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
+        // Allow vertical scrolling when not zoomed, prevent all touch actions when zoomed
+        touchAction: scale > 1 ? 'none' : 'pan-y',
       }}
     >
       <div

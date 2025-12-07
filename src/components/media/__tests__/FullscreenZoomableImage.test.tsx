@@ -102,7 +102,7 @@ describe('FullscreenZoomableImage', () => {
     expect(fullscreenButton).not.toBeInTheDocument();
   });
 
-  it('enters fullscreen on single click when not dragging', async () => {
+  it('does not enter fullscreen on single click (only double click or button)', async () => {
     mockRequestFullscreen.mockResolvedValue(undefined);
     
     const { container } = render(
@@ -120,9 +120,11 @@ describe('FullscreenZoomableImage', () => {
     
     fireEvent.click(imgContainer);
     
-    await waitFor(() => {
-      expect(mockRequestFullscreen).toHaveBeenCalled();
-    });
+    // Wait a bit to ensure no timeout triggers fullscreen
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Should NOT call fullscreen on single click
+    expect(mockRequestFullscreen).not.toHaveBeenCalled();
   });
 
   it('toggles fullscreen on double click', async () => {
@@ -148,7 +150,7 @@ describe('FullscreenZoomableImage', () => {
     });
   });
 
-  it('does not enter fullscreen on click when mouse has moved (drag)', () => {
+  it('does not enter fullscreen on click even when mouse has not moved', async () => {
     const { container } = render(
       <FullscreenZoomableImage
         src="https://example.com/image.jpg"
@@ -159,19 +161,22 @@ describe('FullscreenZoomableImage', () => {
     const imgContainer = container.querySelector('div[class*="relative"]') as HTMLElement;
     expect(imgContainer).toBeInTheDocument();
     
+    // Mock requestFullscreen on the container element
+    (imgContainer as any).requestFullscreen = mockRequestFullscreen;
+    
     // Simulate mouse down
     fireEvent.mouseDown(imgContainer, { clientX: 0, clientY: 0 });
     
-    // Simulate mouse move (drag)
-    fireEvent.mouseMove(imgContainer, { clientX: 10, clientY: 10 });
-    
-    // Simulate mouse up
+    // Simulate mouse up (no movement)
     fireEvent.mouseUp(imgContainer);
     
     // Simulate click
     fireEvent.click(imgContainer);
     
-    // Should not call fullscreen because mouse moved
+    // Wait a bit to ensure no timeout triggers fullscreen
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Should not call fullscreen on single click (even without movement)
     expect(mockRequestFullscreen).not.toHaveBeenCalled();
   });
 
@@ -198,7 +203,7 @@ describe('FullscreenZoomableImage', () => {
     });
   });
 
-  it('handles touch single tap to toggle fullscreen', async () => {
+  it('does not enter fullscreen on single touch tap (only double tap)', async () => {
     mockRequestFullscreen.mockResolvedValue(undefined);
     
     const { container } = render(
@@ -224,9 +229,11 @@ describe('FullscreenZoomableImage', () => {
       changedTouches: [{ clientX: 100, clientY: 100 }],
     });
     
-    await waitFor(() => {
-      expect(mockRequestFullscreen).toHaveBeenCalled();
-    }, { timeout: 500 });
+    // Wait a bit to ensure no timeout triggers fullscreen
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
+    // Should NOT call fullscreen on single tap
+    expect(mockRequestFullscreen).not.toHaveBeenCalled();
   });
 
   it('handles touch double tap to toggle fullscreen', async () => {
