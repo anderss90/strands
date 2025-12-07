@@ -36,63 +36,26 @@ export default function VideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
-    // Track if user has interacted with the page
-    let userInteracted = false;
-
-    const handleUserInteraction = () => {
-      userInteracted = true;
-      // Remove listeners after first interaction
-      document.removeEventListener('touchstart', handleUserInteraction);
-      document.removeEventListener('click', handleUserInteraction);
-    };
-
-    document.addEventListener('touchstart', handleUserInteraction, { once: true });
-    document.addEventListener('click', handleUserInteraction, { once: true });
-
-    // Prevent autoplay on iOS Safari
-    if (!autoplay) {
-      video.pause();
-      video.currentTime = 0;
-    }
-
     const handleLoadStart = () => {
       setIsLoading(true);
       setError(null);
     };
 
     const handleLoadedMetadata = () => {
-      // Video metadata loaded - video is ready to play
       setIsLoading(false);
-      if (!autoplay) {
-        video.pause();
-        video.currentTime = 0;
-      }
     };
     
-    // Also handle when video data is loaded (fired before canplay sometimes)
     const handleLoadedData = () => {
       setIsLoading(false);
-      if (!autoplay) {
-        video.pause();
-        video.currentTime = 0;
-      }
     };
 
     const handleCanPlay = () => {
-      // Video can play - ensure loading is false
       setIsLoading(false);
-      // Explicitly pause if autoplay is disabled (iOS Safari workaround)
-      if (!autoplay) {
-        video.pause();
-        video.currentTime = 0;
-      }
     };
 
     const handlePlay = () => {
-      // Allow playback - if user clicked play, they want to watch
-      // Only prevent autoplay, not user-initiated playback
       setIsPlaying(true);
-      setIsLoading(false); // Video is playing, no longer loading
+      setIsLoading(false);
       onPlay?.();
     };
 
@@ -111,11 +74,6 @@ export default function VideoPlayer({
       setError('Failed to load video');
       console.error('Video error:', video.error);
     };
-
-    // Track clicks on video to mark user interaction
-    const handleVideoClick = () => {
-      userInteracted = true;
-    };
     
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -125,17 +83,13 @@ export default function VideoPlayer({
     video.addEventListener('pause', handlePause);
     video.addEventListener('ended', handleEnded);
     video.addEventListener('error', handleError);
-    video.addEventListener('click', handleVideoClick);
     
     // Set initial loading state based on video readyState
-    // If video already has data loaded, don't show loading spinner
     if (video.readyState >= 2) { // HAVE_CURRENT_DATA or higher
       setIsLoading(false);
     }
 
     return () => {
-      document.removeEventListener('touchstart', handleUserInteraction);
-      document.removeEventListener('click', handleUserInteraction);
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('loadeddata', handleLoadedData);
@@ -144,9 +98,8 @@ export default function VideoPlayer({
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('ended', handleEnded);
       video.removeEventListener('error', handleError);
-      video.removeEventListener('click', handleVideoClick);
     };
-  }, [onPlay, onPause, onEnded, autoplay]);
+  }, [onPlay, onPause, onEnded]);
 
   return (
     <div className={`relative ${className}`}>
@@ -161,13 +114,6 @@ export default function VideoPlayer({
         playsInline // Required for iOS to play inline
         preload="metadata" // Load metadata so video can be played when user clicks
         className="w-full h-auto max-h-96 object-contain rounded-lg"
-        onLoadedMetadata={() => {
-          // Ensure video is paused after metadata loads (prevents autoplay)
-          if (!autoplay && videoRef.current) {
-            videoRef.current.pause();
-            videoRef.current.currentTime = 0;
-          }
-        }}
       >
         Your browser does not support the video tag.
       </video>
