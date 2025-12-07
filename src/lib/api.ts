@@ -388,6 +388,61 @@ export const imageApi = {
     }
   },
 
+  uploadImageDirect: async (file: File, groupIds: string[], userId: string) => {
+    // Import direct upload utilities
+    const { directUploadToSupabase, shouldUseDirectUpload } = await import('@/lib/utils/directUpload');
+    
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+    try {
+      // Upload directly to Supabase Storage
+      const uploadResult = await directUploadToSupabase({
+        file,
+        userId,
+        bucket: 'images',
+      });
+
+      // Save metadata to database
+      const response = await fetch('/api/images/metadata', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}`,
+        },
+        body: JSON.stringify({
+          imageUrl: uploadResult.publicUrl,
+          thumbnailUrl: uploadResult.publicUrl, // For now, use same URL
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type || 'image/jpeg',
+          groupIds,
+        }),
+      });
+
+      if (!response.ok) {
+        // Handle 401 Unauthorized - redirect to login
+        if (response.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          const currentPath = window.location.pathname;
+          if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup') && !currentPath.startsWith('/invite')) {
+            window.location.href = '/login';
+          }
+        }
+        const error = await response.json().catch(() => ({ message: 'Failed to save image metadata' }));
+        throw error;
+      }
+
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors with better messages
+      if (isNetworkError(error)) {
+        throw { message: getErrorMessage(error) };
+      }
+      throw error;
+    }
+  },
+
   getImageFeed: async (limit?: number, offset?: number) => {
     const params = new URLSearchParams();
     if (limit) params.append('limit', limit.toString());

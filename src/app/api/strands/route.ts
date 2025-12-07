@@ -6,8 +6,10 @@ import { randomUUID } from 'crypto';
 import { createStrandSchema } from '@/lib/validation';
 import { notifyGroupMembers } from '@/lib/notifications';
 
-// Maximum file size: 4MB (Vercel has a 4.5MB body size limit for serverless functions)
-const MAX_FILE_SIZE = 4 * 1024 * 1024;
+// Recommended maximum file size: 4MB for serverless functions
+// Files larger than this should use direct upload to Supabase Storage
+// This limit is kept as a recommendation, but we'll allow larger files if they come through
+const RECOMMENDED_MAX_FILE_SIZE = 4 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
 // GET /api/strands - Get strands feed for the authenticated user
@@ -405,12 +407,10 @@ export async function POST(request: NextRequest) {
           normalizedMimeType = extensionToMime[fileExtension] || (isVideo ? 'video/mp4' : 'image/jpeg');
         }
 
-        // Validate file size (videos can be larger, handled by direct upload)
-        if (isImage && currentFile.size > MAX_FILE_SIZE) {
-          return NextResponse.json(
-            { message: `File ${i + 1} (${currentFile.name}) exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB. Use direct upload for larger files.` },
-            { status: 413 }
-          );
+        // Warn about large files but don't reject them
+        // Large files should ideally use direct upload, but we'll handle them here if they come through
+        if (isImage && currentFile.size > RECOMMENDED_MAX_FILE_SIZE) {
+          console.warn(`Large file upload detected: ${(currentFile.size / 1024 / 1024).toFixed(2)}MB. Consider using direct upload for better performance.`);
         }
 
         // Generate unique filename

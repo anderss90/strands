@@ -128,7 +128,7 @@ export default function ProfilePage() {
     );
   }
 
-  const canEnable = isSupported && (permission === 'default' || (permission === 'granted' && !isSubscribed));
+  const canEnable = isSupported && !isSubscribed && (permission === 'default' || permission === 'denied' || permission === 'granted');
   const canDisable = isSupported && isSubscribed;
 
   return (
@@ -218,12 +218,17 @@ export default function ProfilePage() {
                         {isSubscribed
                           ? 'Notifications are enabled'
                           : permission === 'denied'
-                          ? 'Notifications are blocked. Please enable them in your browser settings.'
+                          ? 'Notifications are blocked. Click "Enable Notifications" to request permission again, or enable them in your browser settings.'
                           : 'Notifications are disabled'}
                       </p>
                       {permission === 'granted' && isSubscribed && (
                         <p className="text-xs text-gray-400 mt-1">
                           You will receive notifications for new strands and comments in your groups.
+                        </p>
+                      )}
+                      {permission === 'denied' && !isSubscribed && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          If you previously denied permission, you may need to enable notifications in your browser settings first, then click the button to try again.
                         </p>
                       )}
                     </div>

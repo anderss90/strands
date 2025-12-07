@@ -334,47 +334,126 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         return new File([f.fileData.blob], f.fileData.name, { type: f.fileData.type });
       });
 
-      // Upload all files using traditional server-side upload
+      // Upload all files
       if (filesToUpload.length > 0) {
-        const formData = new FormData();
+        const { directUploadToSupabase, shouldUseDirectUpload } = await import('@/lib/utils/directUpload');
+        const imageIds: string[] = [];
+        const filesForServerless: File[] = [];
         
-        if (content.trim()) {
-          formData.append('content', content.trim());
+        // Process each file - use direct upload for large files/videos
+        for (let i = 0; i < filesToUpload.length; i++) {
+          const file = filesToUpload[i];
+          const useDirectUpload = shouldUseDirectUpload(file);
+          
+          if (useDirectUpload && user?.id) {
+            // Upload directly to Supabase Storage
+            const progressStart = 10 + (i * 70 / filesToUpload.length);
+            const progressEnd = 10 + ((i + 1) * 70 / filesToUpload.length);
+            
+            const uploadResult = await directUploadToSupabase({
+              file,
+              userId: user.id,
+              bucket: 'images',
+              onProgress: (progress) => {
+                // Update progress for this file
+                const currentProgress = progressStart + (progress.percentage * (progressEnd - progressStart) / 100);
+                setUploadProgress(currentProgress);
+              },
+            });
+            
+            // Save metadata to database to get image ID
+            const metadataResponse = await fetch('/api/images/metadata', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                imageUrl: uploadResult.publicUrl,
+                thumbnailUrl: uploadResult.publicUrl,
+                fileName: file.name,
+                fileSize: file.size,
+                mimeType: file.type || (files[i]?.isVideo ? 'video/mp4' : 'image/jpeg'),
+                groupIds: [], // We'll share via strand, not directly
+              }),
+            });
+            
+            if (!metadataResponse.ok) {
+              const errorData = await metadataResponse.json().catch(() => ({ message: 'Failed to save image metadata' }));
+              throw new Error(errorData.message || 'Failed to save image metadata');
+            }
+            
+            const imageData = await metadataResponse.json();
+            imageIds.push(imageData.id);
+          } else {
+            // Use traditional serverless upload
+            filesForServerless.push(file);
+          }
         }
         
-        // Append all files
-        filesToUpload.forEach(file => {
-          formData.append('files', file);
-        });
+        setUploadProgress(85);
         
-        formData.append('groupIds', JSON.stringify(selectedGroupIds));
-
-        // Use fetchWithRetry for better network error handling
-        const response = await fetchWithRetry('/api/strands', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
-          timeout: 180000, // 3 minutes for file uploads
-          retries: 2,
-          retryDelay: 2000,
-        });
-
-        if (!response.ok) {
-          // Handle 413 Payload Too Large specifically
-          if (response.status === 413) {
-            const errorData = await response.json().catch(() => ({ 
-              message: 'File size exceeds maximum allowed size of 4MB. Please choose smaller files or compress them.' 
-            }));
-            throw new Error(errorData.message || 'File size exceeds maximum allowed size of 4MB.');
+        // If we have image IDs from direct uploads, use JSON API
+        // Otherwise, use FormData for traditional upload
+        if (imageIds.length > 0 && filesForServerless.length === 0) {
+          // All files were uploaded directly, use JSON API with image IDs
+          const response = await fetch('/api/strands', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              content: content.trim() || undefined,
+              imageId: imageIds[0], // Use first image ID for backward compatibility
+              groupIds: selectedGroupIds,
+            }),
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Failed to create strand' }));
+            throw new Error(errorData.message || 'Failed to create strand');
+          }
+        } else {
+          // Mixed or all traditional uploads - use FormData
+          const formData = new FormData();
+          
+          if (content.trim()) {
+            formData.append('content', content.trim());
           }
           
-          const errorData = await response.json().catch(() => ({ message: 'Failed to create strand' }));
-          throw new Error(errorData.message || 'Failed to create strand');
-        }
+          // Append files that weren't uploaded directly
+          filesForServerless.forEach((file) => {
+            formData.append('files', file);
+          });
+          
+          // If we have image IDs, add the first one
+          if (imageIds.length > 0) {
+            formData.append('imageId', imageIds[0]);
+          }
+          
+          formData.append('groupIds', JSON.stringify(selectedGroupIds));
 
-        const strandData = await response.json();
+          // Use fetchWithRetry for better network error handling
+          const response = await fetchWithRetry('/api/strands', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+            timeout: 180000, // 3 minutes for file uploads
+            retries: 2,
+            retryDelay: 2000,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Failed to create strand' }));
+            throw new Error(errorData.message || 'Failed to create strand');
+          }
+        }
+        
+        setUploadProgress(100);
+        
         // Reset form and return success
         setContent('');
         setFiles([]);

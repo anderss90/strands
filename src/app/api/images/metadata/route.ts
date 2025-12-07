@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/middleware';
 import { query } from '@/lib/db';
-import { createServerSupabase } from '@/lib/supabase';
-import { randomUUID } from 'crypto';
 import { uploadImageSchema } from '@/lib/validation';
 
-// Maximum file size: 4MB for serverless functions
-// Files larger than this should use direct upload to Supabase Storage
-// This limit is kept as a recommendation, but we'll allow larger files if they come through
-const RECOMMENDED_MAX_FILE_SIZE = 4 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-
+/**
+ * POST /api/images/metadata
+ * Saves image metadata to database after direct upload to Supabase Storage
+ * Accepts: imageUrl, file metadata, groupIds
+ */
 export async function POST(request: NextRequest) {
   try {
     const authResult = await authenticateRequest(request);
@@ -28,56 +25,21 @@ export async function POST(request: NextRequest) {
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
     
-    // Parse form data
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const groupIdsJson = formData.get('groupIds') as string | null;
+    const body = await request.json();
+    const { imageUrl, thumbnailUrl, fileName, fileSize, mimeType, groupIds: groupIdsJson } = body;
 
-    if (!file) {
+    if (!imageUrl) {
       return NextResponse.json(
-        { message: 'File is required' },
+        { message: 'Image URL is required' },
         { status: 400 }
       );
-    }
-
-    // Validate file type
-    // On iOS, file.type can be empty, so we also check the file extension
-    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-    const hasValidMimeType = file.type && ALLOWED_MIME_TYPES.includes(file.type);
-    const hasValidExtension = allowedExtensions.includes(fileExtension);
-    
-    if (!hasValidMimeType && !hasValidExtension) {
-      return NextResponse.json(
-        { message: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.' },
-        { status: 400 }
-      );
-    }
-    
-    // Normalize MIME type if it's missing but extension is valid
-    let normalizedMimeType = file.type;
-    if (!normalizedMimeType && hasValidExtension) {
-      const extensionToMime: Record<string, string> = {
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'gif': 'image/gif',
-        'webp': 'image/webp',
-      };
-      normalizedMimeType = extensionToMime[fileExtension] || 'image/jpeg';
-    }
-
-    // Warn about large files but don't reject them
-    // Large files should ideally use direct upload, but we'll handle them here if they come through
-    if (file.size > RECOMMENDED_MAX_FILE_SIZE) {
-      console.warn(`Large file upload detected: ${(file.size / 1024 / 1024).toFixed(2)}MB. Consider using direct upload for better performance.`);
     }
 
     // Parse and validate group IDs
     let groupIds: string[] = [];
     if (groupIdsJson) {
       try {
-        groupIds = JSON.parse(groupIdsJson);
+        groupIds = Array.isArray(groupIdsJson) ? groupIdsJson : JSON.parse(groupIdsJson);
         const validatedData = uploadImageSchema.parse({ groupIds });
         groupIds = validatedData.groupIds;
       } catch (error: any) {
@@ -103,14 +65,11 @@ export async function POST(request: NextRequest) {
           [authUser.userId, groupIds]
         );
 
-        // Extract group IDs and handle potential string/UUID conversion
         const memberGroupIds = membershipCheck.rows.map(row => {
           const groupId = row.group_id;
-          // Convert to string if it's not already (handles UUID type from PostgreSQL)
           return typeof groupId === 'string' ? groupId : String(groupId);
         });
         
-        // Convert all input group IDs to strings for comparison
         const groupIdsAsStrings = groupIds.map(id => String(id));
         const invalidGroupIds = groupIdsAsStrings.filter(id => !memberGroupIds.includes(id));
 
@@ -129,46 +88,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate unique filename
-    const finalFileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${randomUUID()}.${finalFileExtension}`;
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-
-    // Upload to Supabase Storage
-    const supabase = createServerSupabase();
-    const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'images';
-    
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(storageBucket)
-      .upload(fileName, fileBuffer, {
-        contentType: normalizedMimeType,
-        upsert: false,
-      });
-
-    if (uploadError) {
-      console.error('Supabase Storage upload error:', uploadError);
-      return NextResponse.json(
-        { message: 'Failed to upload image to storage' },
-        { status: 500 }
-      );
-    }
-
-    // Get public URL for the uploaded image
-    const { data: urlData } = supabase.storage
-      .from(storageBucket)
-      .getPublicUrl(fileName);
-
-    const imageUrl = urlData.publicUrl;
-    // For now, thumbnail is the same as image
-    // In production, generate a thumbnail using sharp or similar
-    const thumbnailUrl = imageUrl;
-
     // Save image metadata to database
     const imageResult = await query(
       `INSERT INTO images (user_id, image_url, thumbnail_url, file_name, file_size, mime_type)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [authUser.userId, imageUrl, thumbnailUrl, file.name, file.size, normalizedMimeType]
+      [
+        authUser.userId,
+        imageUrl,
+        thumbnailUrl || imageUrl,
+        fileName || 'uploaded-image',
+        fileSize || 0,
+        mimeType || 'image/jpeg',
+      ]
     );
 
     const image = imageResult.rows[0];
@@ -207,7 +139,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Image upload error:', error);
+    console.error('Image metadata save error:', error);
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }

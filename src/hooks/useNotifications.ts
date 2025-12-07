@@ -93,14 +93,14 @@ export function useNotifications() {
         return { success: false, error: 'Notifications are not supported in this browser' };
       }
 
-      // Request permission
+      // Always request permission, regardless of current state
+      // This allows users to grant permission even if it was previously denied
       let currentPermission: NotificationPermission = 'default';
       try {
-        currentPermission = Notification.permission;
-        if (currentPermission === 'default') {
-          currentPermission = await Notification.requestPermission();
-          setState(prev => ({ ...prev, permission: currentPermission }));
-        }
+        // Always call requestPermission - it will return the current state if denied,
+        // but may show a prompt if the user changed browser settings
+        currentPermission = await Notification.requestPermission();
+        setState(prev => ({ ...prev, permission: currentPermission }));
       } catch (error) {
         setState(prev => ({ ...prev, isLoading: false }));
         return { success: false, error: 'Failed to request notification permission' };
@@ -108,6 +108,9 @@ export function useNotifications() {
 
       if (currentPermission !== 'granted') {
         setState(prev => ({ ...prev, isLoading: false }));
+        if (currentPermission === 'denied') {
+          return { success: false, error: 'Notification permission was denied. Please enable notifications in your browser settings and try again.' };
+        }
         return { success: false, error: 'Notification permission was denied' };
       }
 

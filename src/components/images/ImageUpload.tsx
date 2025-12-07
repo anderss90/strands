@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { imageApi, groupApi, Group } from '@/lib/api';
 import { useMediaPermissions } from '@/hooks/useMediaPermissions';
 import { compressImage, needsCompression } from '@/lib/utils/imageCompression';
+import { shouldUseDirectUpload } from '@/lib/utils/directUpload';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ImageUploadProps {
   onSuccess?: () => void;
@@ -24,6 +26,7 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { requestGalleryAccess, isChecking: checkingPermissions } = useMediaPermissions();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchGroups();
@@ -166,7 +169,16 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
     setUploading(true);
 
     try {
-      await imageApi.uploadImage(file, selectedGroupIds);
+      // Check if we should use direct upload (for large files or after compression)
+      const useDirectUpload = shouldUseDirectUpload(file);
+      
+      if (useDirectUpload && user?.id) {
+        // Use direct upload to Supabase Storage
+        await imageApi.uploadImageDirect(file, selectedGroupIds, user.id);
+      } else {
+        // Use traditional serverless upload
+        await imageApi.uploadImage(file, selectedGroupIds);
+      }
       
       // Reset form
       setFile(null);
@@ -186,13 +198,12 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
         router.push('/home');
       }
     } catch (err: any) {
-      // imageApi.uploadImage now handles network errors better
       // Extract user-friendly message from error
       const errorMessage = err.message || 'Failed to upload image';
       
       // Provide more helpful messages for common errors
       if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
-        setError('Upload took too long. Please check your internet connection and try again with a smaller image.');
+        setError('Upload took too long. Please check your internet connection and try again.');
       } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
         setError('Network error. Please check your internet connection and try again.');
       } else {
