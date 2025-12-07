@@ -40,7 +40,7 @@ async function markMigrationAsExecuted(pool, filename) {
   );
 }
 
-async function runMigration(pool, filePath) {
+async function runMigration(pool, filePath, force = false) {
   const filename = path.basename(filePath);
   console.log(`\n📄 Running migration: ${filename}`);
   
@@ -56,6 +56,14 @@ async function runMigration(pool, filePath) {
     console.log(`✅ Successfully executed: ${filename}`);
     return true;
   } catch (error) {
+    // Check if it's a "already exists" error (common when migrations were run manually)
+    if (error.code === '42710' || error.code === '42P07' || error.message.includes('already exists')) {
+      console.log(`⚠️  Migration ${filename} appears to have been run already (objects exist).`);
+      console.log(`   Marking as executed to prevent future runs...`);
+      // Mark as executed even if it failed (because it's already applied)
+      await markMigrationAsExecuted(pool, filename);
+      return true;
+    }
     console.error(`❌ Error executing ${filename}:`, error.message);
     throw error;
   }
@@ -144,11 +152,12 @@ async function main() {
       
       if (executedMigrations.has(filename)) {
         console.log(`⚠️  Migration ${filename} has already been executed.`);
-        console.log('   Use --force to re-run it (not recommended).');
+        console.log('   Skipping...');
         process.exit(0);
       }
       
-      await runMigration(pool, filePath);
+      const force = process.argv.includes('--force');
+      await runMigration(pool, filePath, force);
     } else {
       // Run all pending migrations
       const allMigrations = await getAllMigrations(migrationsDir);
@@ -170,7 +179,7 @@ async function main() {
       });
       
       for (const filePath of pendingMigrations) {
-        await runMigration(pool, filePath);
+        await runMigration(pool, filePath, false);
       }
       
       console.log(`\n✅ Successfully executed ${pendingMigrations.length} migration(s)!`);
