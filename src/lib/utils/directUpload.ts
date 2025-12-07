@@ -210,13 +210,14 @@ export async function directUploadWithProgress(
 
 /**
  * Determines if a file should use direct upload
- * Files > 4MB or videos should use direct upload
+ * Files > 4MB, videos, or audio should use direct upload
  */
 export function shouldUseDirectUpload(file: File): boolean {
   const MAX_SERVERLESS_SIZE = 4 * 1024 * 1024; // 4MB
   const isVideo = file.type.startsWith('video/');
+  const isAudio = file.type.startsWith('audio/');
   
-  return file.size > MAX_SERVERLESS_SIZE || isVideo;
+  return file.size > MAX_SERVERLESS_SIZE || isVideo || isAudio;
 }
 
 /**
@@ -259,6 +260,33 @@ export function getVideoMetadata(file: File): Promise<{
     };
     
     video.src = URL.createObjectURL(file);
+  });
+}
+
+/**
+ * Gets audio metadata from an audio file
+ * Returns duration only (no width/height needed for audio)
+ */
+export function getAudioMetadata(file: File): Promise<{
+  duration: number;
+}> {
+  return new Promise((resolve, reject) => {
+    const audio = document.createElement('audio');
+    audio.preload = 'metadata';
+    
+    audio.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(audio.src);
+      resolve({
+        duration: Math.round(audio.duration),
+      });
+    };
+    
+    audio.onerror = () => {
+      window.URL.revokeObjectURL(audio.src);
+      reject(new Error('Failed to load audio metadata'));
+    };
+    
+    audio.src = URL.createObjectURL(file);
   });
 }
 

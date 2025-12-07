@@ -104,7 +104,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine media type from mimeType if not provided
-    const finalMediaType = mediaType || (mimeType?.startsWith('video/') ? 'video' : 'image');
+    const finalMediaType = mediaType || 
+      (mimeType?.startsWith('video/') ? 'video' : 
+       mimeType?.startsWith('audio/') ? 'audio' : 
+       'image');
     
     // Save image metadata to database
     const imageResult = await query(

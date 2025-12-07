@@ -6,7 +6,7 @@ import { groupApi, Group } from '@/lib/api';
 import { fetchWithRetry, isNetworkError, getErrorMessage } from '@/lib/utils/fetchWithRetry';
 import { useMediaPermissions } from '@/hooks/useMediaPermissions';
 import { compressImage, needsCompression } from '@/lib/utils/imageCompression';
-import { directUploadToSupabase, shouldUseDirectUpload, getVideoMetadata, validateVideoSize, generateVideoThumbnail } from '@/lib/utils/directUpload';
+import { directUploadToSupabase, shouldUseDirectUpload, getVideoMetadata, getAudioMetadata, validateVideoSize, generateVideoThumbnail } from '@/lib/utils/directUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { isValidMedia, getMediaType, validateFileSize, MAX_VIDEO_SIZE } from '@/types/media';
 
@@ -22,7 +22,9 @@ interface FileWithPreview {
   fileData: { blob: Blob; name: string; type: string };
   preview: string;
   isVideo: boolean;
+  isAudio: boolean;
   videoMetadata?: { duration?: number; width?: number; height?: number };
+  audioMetadata?: { duration?: number };
 }
 
 export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImage, sharedContent }: StrandCreateProps) {
@@ -112,7 +114,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
   const processFile = async (selectedFile: File): Promise<FileWithPreview | null> => {
     // Validate file type
     if (!isValidMedia(selectedFile)) {
-      setError('Invalid file type. Only images (JPEG, PNG, GIF, WebP) and videos (MP4, MOV, AVI, WebM) are allowed.');
+      setError('Invalid file type. Only images (JPEG, PNG, GIF, WebP), videos (MP4, MOV, AVI, WebM), and audio (MP3, OGG, WAV, AAC) are allowed.');
       return null;
     }
 
@@ -124,6 +126,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     }
 
     const isValidVideo = mediaType === 'video';
+    const isValidAudio = mediaType === 'audio';
 
     // Validate file size
     const sizeValidation = validateFileSize(selectedFile, mediaType);
@@ -134,6 +137,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
 
     try {
       let videoMetadata: { duration?: number; width?: number; height?: number } | undefined;
+      let audioMetadata: { duration?: number } | undefined;
 
       // For videos, get metadata and validate size
       if (mediaType === 'video') {
@@ -147,6 +151,17 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
           videoMetadata = await getVideoMetadata(selectedFile);
         } catch (err) {
           console.warn('Failed to get video metadata:', err);
+          // Continue without metadata
+        }
+      }
+
+      // For audio, get metadata (duration only)
+      if (mediaType === 'audio') {
+        try {
+          const audioMeta = await getAudioMetadata(selectedFile);
+          audioMetadata = { duration: audioMeta.duration };
+        } catch (err) {
+          console.warn('Failed to get audio metadata:', err);
           // Continue without metadata
         }
       }
@@ -176,8 +191,17 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
           'mp4': 'video/mp4',
           'mov': 'video/quicktime',
           'avi': 'video/x-msvideo',
+          'mp3': 'audio/mpeg',
+          'mpeg': 'audio/mpeg',
+          'ogg': 'audio/ogg',
+          'wav': 'audio/wav',
+          'aac': 'audio/aac',
+          'm4a': 'audio/mp4',
         };
-        normalizedMimeType = extensionToMime[currentFileExtension] || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg');
+        normalizedMimeType = extensionToMime[currentFileExtension] || 
+          (mediaType === 'video' ? 'video/mp4' : 
+           mediaType === 'audio' ? 'audio/mpeg' : 
+           'image/jpeg');
       }
 
       // Create preview from the blob
@@ -185,6 +209,9 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
       if (mediaType === 'video') {
         // For videos, use object URL for preview
         preview = URL.createObjectURL(blob);
+      } else if (mediaType === 'audio') {
+        // For audio, use a placeholder icon (no visual preview)
+        preview = 'audio://placeholder';
       } else {
         // For images, use FileReader to create data URL
         preview = await new Promise<string>((resolve, reject) => {
@@ -210,7 +237,9 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         },
         preview,
         isVideo: isValidVideo,
+        isAudio: isValidAudio,
         videoMetadata,
+        audioMetadata,
       };
     } catch (err: any) {
       console.error('Error processing file:', err);
@@ -259,8 +288,8 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
 
   const removeFile = (index: number) => {
     const fileToRemove = files[index];
-    // Revoke object URL if it's a video
-    if (fileToRemove.isVideo && fileToRemove.preview.startsWith('blob:')) {
+    // Revoke object URL if it's a video or audio
+    if ((fileToRemove.isVideo || fileToRemove.isAudio) && fileToRemove.preview.startsWith('blob:')) {
       URL.revokeObjectURL(fileToRemove.preview);
     }
     setFiles(prev => prev.filter((_, i) => i !== index));
@@ -369,9 +398,10 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
               },
             });
             
-            // Generate and upload thumbnail for videos
-            let thumbnailUrl = uploadResult.publicUrl; // Default to video URL
+            // Generate and upload thumbnail for videos (not needed for audio)
+            let thumbnailUrl = uploadResult.publicUrl; // Default to media URL
             const isVideo = files[i]?.isVideo;
+            const isAudio = files[i]?.isAudio;
             
             if (isVideo) {
               try {
@@ -397,10 +427,14 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                 // Continue with video URL as thumbnail (fallback)
                 thumbnailUrl = uploadResult.publicUrl;
               }
+            } else if (isAudio) {
+              // For audio, use a placeholder or null for thumbnail
+              thumbnailUrl = uploadResult.publicUrl; // Could use a default audio icon URL here
             }
             
-            // Get video metadata if available
+            // Get video/audio metadata if available
             const videoMetadata = files[i]?.videoMetadata;
+            const audioMetadata = files[i]?.audioMetadata;
             
             // Save metadata to database to get image ID
             const metadataResponse = await fetch('/api/images/metadata', {
@@ -414,9 +448,9 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                 thumbnailUrl: thumbnailUrl,
                 fileName: file.name,
                 fileSize: file.size,
-                mimeType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
-                mediaType: isVideo ? 'video' : 'image',
-                duration: videoMetadata?.duration || null,
+                mimeType: file.type || (isVideo ? 'video/mp4' : isAudio ? 'audio/mpeg' : 'image/jpeg'),
+                mediaType: isVideo ? 'video' : isAudio ? 'audio' : 'image',
+                duration: (videoMetadata?.duration || audioMetadata?.duration) || null,
                 width: videoMetadata?.width || null,
                 height: videoMetadata?.height || null,
                 groupIds: [], // We'll share via strand, not directly
@@ -601,7 +635,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*,video/*,audio/*"
         onChange={handleFileChange}
         multiple
         className="hidden"
@@ -633,9 +667,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         {compressing && (
           <div className="mb-3 p-3 bg-blue-900/20 border border-blue-700 text-blue-400 rounded-lg text-sm flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-            {files.some(f => f.isVideo) 
+            {files.some(f => f.isVideo || f.isAudio) 
               ? (files.every(f => f.isVideo) 
                   ? 'Processing video...' 
+                  : files.every(f => f.isAudio)
+                  ? 'Processing audio...'
                   : 'Processing media...')
               : 'Compressing images to reduce file size...'}
           </div>
@@ -738,6 +774,12 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                       playsInline
                       muted
                     />
+                  ) : fileWithPreview.isAudio ? (
+                    <div className="w-full h-32 bg-gray-700 flex items-center justify-center">
+                      <svg className="w-12 h-12 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+                      </svg>
+                    </div>
                   ) : (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
@@ -768,6 +810,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                   {fileWithPreview.isVideo && (
                     <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1 rounded">
                       🎥
+                    </div>
+                  )}
+                  {fileWithPreview.isAudio && (
+                    <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1 rounded">
+                      🎵
                     </div>
                   )}
                 </div>
@@ -847,9 +894,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         ) : compressing ? (
           <span className="flex items-center justify-center gap-2">
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            {files.some(f => f.isVideo)
+            {files.some(f => f.isVideo || f.isAudio)
               ? (files.every(f => f.isVideo)
                   ? 'Processing video...'
+                  : files.every(f => f.isAudio)
+                  ? 'Processing audio...'
                   : 'Processing media...')
               : 'Compressing image...'}
           </span>

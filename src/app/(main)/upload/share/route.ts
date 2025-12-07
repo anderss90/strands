@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
+import { detectGoogleMapsLinks, parseGoogleMapsUrl } from '@/lib/utils/linkDetection';
 
 // Maximum file size for base64 conversion (4MB)
 // Files larger than this or videos should use direct upload
@@ -34,6 +35,22 @@ export async function POST(request: NextRequest) {
       if (url) {
         if (sharedContent) sharedContent += '\n\n';
         sharedContent += url;
+      }
+
+      // Detect and format Google Maps links in the shared content
+      const mapsLinks = detectGoogleMapsLinks(sharedContent);
+      if (mapsLinks.length > 0) {
+        // Replace Google Maps URLs with formatted display text
+        // Process in reverse order to maintain correct indices
+        for (let i = mapsLinks.length - 1; i >= 0; i--) {
+          const mapsLink = mapsLinks[i];
+          const parsed = parseGoogleMapsUrl(mapsLink.link.url);
+          if (parsed) {
+            const before = sharedContent.substring(0, mapsLink.startIndex);
+            const after = sharedContent.substring(mapsLink.endIndex);
+            sharedContent = before + parsed.displayText + ' ' + parsed.url + after;
+          }
+        }
       }
 
       // Return HTML page that stores the shared content in sessionStorage and redirects
@@ -83,21 +100,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.redirect(new URL('/upload', request.url));
     }
 
-    // Validate file type (support both images and videos)
+    // Validate file type (support images, videos, and audio)
     const isVideo = file.type.startsWith('video/');
+    const isAudio = file.type.startsWith('audio/');
     const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     const allowedVideoTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
+    const allowedAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/mp4'];
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
     const allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     const allowedVideoExtensions = ['mp4', 'mov', 'avi', 'webm'];
+    const allowedAudioExtensions = ['mp3', 'mpeg', 'ogg', 'wav', 'webm', 'aac', 'm4a'];
     const hasValidImageMimeType = file.type && allowedImageTypes.includes(file.type);
     const hasValidVideoMimeType = file.type && allowedVideoTypes.includes(file.type);
+    const hasValidAudioMimeType = file.type && allowedAudioTypes.includes(file.type);
     const hasValidImageExtension = allowedImageExtensions.includes(fileExtension);
     const hasValidVideoExtension = allowedVideoExtensions.includes(fileExtension);
+    const hasValidAudioExtension = allowedAudioExtensions.includes(fileExtension);
     const isValidImage = hasValidImageMimeType || hasValidImageExtension;
     const isValidVideo = hasValidVideoMimeType || hasValidVideoExtension;
+    const isValidAudio = hasValidAudioMimeType || hasValidAudioExtension;
 
-    if (!isValidImage && !isValidVideo) {
+    if (!isValidImage && !isValidVideo && !isValidAudio) {
       // Invalid file type, redirect to upload page
       return NextResponse.redirect(new URL('/upload?error=invalid_file_type', request.url));
     }
@@ -114,13 +137,22 @@ export async function POST(request: NextRequest) {
         'mp4': 'video/mp4',
         'mov': 'video/quicktime',
         'avi': 'video/x-msvideo',
+        'mp3': 'audio/mpeg',
+        'mpeg': 'audio/mpeg',
+        'ogg': 'audio/ogg',
+        'wav': 'audio/wav',
+        'aac': 'audio/aac',
+        'm4a': 'audio/mp4',
       };
-      mimeType = extensionToMime[fileExtension] || (isValidVideo ? 'video/mp4' : 'image/jpeg');
+      mimeType = extensionToMime[fileExtension] || 
+        (isValidVideo ? 'video/mp4' : 
+         isValidAudio ? 'audio/mpeg' : 
+         'image/jpeg');
     }
 
-    // Check if file is a video or too large for base64 conversion
-    // Videos and large files should use direct upload to Supabase Storage
-    const shouldUseDirectUpload = isValidVideo || file.size > MAX_BASE64_SIZE;
+    // Check if file is a video, audio, or too large for base64 conversion
+    // Videos, audio, and large files should use direct upload to Supabase Storage
+    const shouldUseDirectUpload = isValidVideo || isValidAudio || file.size > MAX_BASE64_SIZE;
 
     if (shouldUseDirectUpload) {
       // For videos or large files, we can't convert to base64 (would cause 413 error)
@@ -130,7 +162,10 @@ export async function POST(request: NextRequest) {
         const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'images';
         
         // Generate unique filename
-        const fileExtension = file.name.split('.').pop()?.toLowerCase() || (isValidVideo ? 'mp4' : 'jpg');
+        const fileExtension = file.name.split('.').pop()?.toLowerCase() || 
+          (isValidVideo ? 'mp4' : 
+           isValidAudio ? 'mp3' : 
+           'jpg');
         const fileName = `${randomUUID()}.${fileExtension}`;
         const filePath = `shared/${fileName}`; // Store in a "shared" folder
         
@@ -165,7 +200,7 @@ export async function POST(request: NextRequest) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Processing shared ${isValidVideo ? 'video' : 'file'}...</title>
+  <title>Processing shared ${isValidVideo ? 'video' : isValidAudio ? 'audio' : 'file'}...</title>
 </head>
 <body>
   <script>
@@ -177,19 +212,20 @@ export async function POST(request: NextRequest) {
         size: ${file.size},
         url: ${JSON.stringify(fileUrl)},
         path: ${JSON.stringify(filePath)},
-        isVideo: ${isValidVideo}
+        isVideo: ${isValidVideo},
+        isAudio: ${isValidAudio}
       };
       
       sessionStorage.setItem('sharedFile', JSON.stringify(fileData));
       
       // Redirect to upload page
-      window.location.href = '/upload?shared=true&type=${isValidVideo ? 'video' : 'large'}';
+      window.location.href = '/upload?shared=true&type=${isValidVideo ? 'video' : isValidAudio ? 'audio' : 'large'}';
     } catch (error) {
       console.error('Error processing shared file:', error);
       window.location.href = '/upload?error=processing_failed';
     }
   </script>
-  <p>Processing shared ${isValidVideo ? 'video' : 'file'}...</p>
+  <p>Processing shared ${isValidVideo ? 'video' : isValidAudio ? 'audio' : 'file'}...</p>
 </body>
 </html>
         `;

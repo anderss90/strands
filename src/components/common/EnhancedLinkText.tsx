@@ -1,6 +1,7 @@
 'use client';
 
 import { detectUrls, ParsedUrl, isSpotifyUrl, isYouTubeUrl } from '@/lib/utils/url';
+import { isGoogleMapsUrl, parseGoogleMapsUrl } from '@/lib/utils/linkDetection';
 import SpotifyEmbed from './SpotifyEmbed';
 import YouTubeEmbed from './YouTubeEmbed';
 import YouTubeThumbnail from './YouTubeThumbnail';
@@ -163,8 +164,41 @@ export default function EnhancedLinkText({ text, className = '', showThumbnails 
             }
           }
         } else {
-          // Render regular link
+          // Render regular link or Google Maps link
           const url = part as ParsedUrl;
+          const isMaps = isGoogleMapsUrl(url.url);
+          const mapsInfo = isMaps ? parseGoogleMapsUrl(url.url) : null;
+          
+          if (isMaps && mapsInfo) {
+            // Render Google Maps link with special styling
+            return (
+              <a
+                key={index}
+                href={mapsInfo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Try to open in Maps app on mobile
+                  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                    // For iOS, try maps:// protocol
+                    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                      const mapsUrl = mapsInfo.url.replace(/^https?:\/\//, 'maps://');
+                      window.location.href = mapsUrl;
+                      e.preventDefault();
+                    }
+                  }
+                }}
+                className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 underline break-all"
+                title={mapsInfo.url}
+              >
+                <span className="text-base">📍</span>
+                <span>{mapsInfo.displayText}</span>
+              </a>
+            );
+          }
+          
+          // Render regular link
           return (
             <a
               key={index}

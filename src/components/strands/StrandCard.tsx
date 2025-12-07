@@ -5,6 +5,7 @@ import { Strand, Comment } from '@/types/strand';
 import EnhancedLinkText from '@/components/common/EnhancedLinkText';
 import { strandApi } from '@/lib/api';
 import { detectUrls, isYouTubeUrl, isSpotifyUrl } from '@/lib/utils/url';
+import AudioPlayer from '@/components/media/AudioPlayer';
 
 interface StrandCardProps {
   strand: Strand;
@@ -190,8 +191,23 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
           {displayImages.map((mediaEntry, index) => {
             const media = mediaEntry.image;
             const isVideo = media.mediaType === 'video' || media.mimeType?.startsWith('video/');
+            const isAudio = media.mediaType === 'audio' || media.mimeType?.startsWith('audio/');
             const isLast = index === displayImages.length - 1;
             const showMoreBadge = isLast && hasMoreImages;
+            
+            // For audio files, render AudioPlayer instead of image/video
+            if (isAudio) {
+              return (
+                <div key={media.id || index} className="col-span-2 bg-gray-800 p-2">
+                  <AudioPlayer
+                    src={media.mediaUrl || media.imageUrl || ''}
+                    fileName={media.fileName}
+                    duration={media.duration || null}
+                    className="w-full"
+                  />
+                </div>
+              );
+            }
             
             return (
               <div key={media.id || index} className="relative aspect-square bg-gray-800">

@@ -8,6 +8,7 @@ import { Comment } from '@/types/comment';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import EnhancedLinkText from '@/components/common/EnhancedLinkText';
 import VideoPlayer from '@/components/media/VideoPlayer';
+import AudioPlayer from '@/components/media/AudioPlayer';
 import FullscreenZoomableImage from '@/components/media/FullscreenZoomableImage';
 import { strandApi } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils/dateFormat';
@@ -576,6 +577,7 @@ export default function StrandViewer({ strandId, groupId, onClose, onEdit, onRef
               {displayImages.map((mediaEntry, index) => {
                 const media = mediaEntry.image;
                 const isVideo = media.mediaType === 'video' || media.mimeType?.startsWith('video/');
+                const isAudio = media.mediaType === 'audio' || media.mimeType?.startsWith('audio/');
                 return (
                   <div
                     key={mediaEntry.id || media.id || index}
@@ -588,6 +590,13 @@ export default function StrandViewer({ strandId, groupId, onClose, onEdit, onRef
                         className="max-w-full max-h-full"
                         controls
                         autoplay={false}
+                      />
+                    ) : isAudio ? (
+                      <AudioPlayer
+                        src={media.imageUrl || media.mediaUrl || ''}
+                        fileName={media.fileName}
+                        duration={media.duration || null}
+                        className="w-full max-w-md"
                       />
                     ) : (
                       <FullscreenZoomableImage
