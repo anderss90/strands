@@ -38,6 +38,17 @@ export async function compressImage(
   file: File,
   options: CompressionOptions = {}
 ): Promise<File> {
+  // Skip compression for videos - compression is only for images
+  // Check both MIME type and file extension (iOS may have empty file.type)
+  const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+  const videoExtensions = ['mp4', 'mov', 'avi', 'webm'];
+  const isVideo = file.type.startsWith('video/') || videoExtensions.includes(fileExtension);
+  
+  if (isVideo) {
+    console.log('Skipping compression for video file');
+    return file;
+  }
+  
   // If file is already under the limit, return as-is
   if (file.size <= MAX_FILE_SIZE) {
     console.log('Image is already under size limit, skipping compression');
@@ -133,8 +144,18 @@ export async function compressImage(
 
 /**
  * Check if an image needs compression
+ * Returns false for videos - compression is only for images
  */
 export function needsCompression(file: File): boolean {
+  // Skip compression check for videos
+  // Check both MIME type and file extension (iOS may have empty file.type)
+  const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+  const videoExtensions = ['mp4', 'mov', 'avi', 'webm'];
+  const isVideo = file.type.startsWith('video/') || videoExtensions.includes(fileExtension);
+  
+  if (isVideo) {
+    return false;
+  }
   return file.size > MAX_FILE_SIZE;
 }
 
