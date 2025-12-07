@@ -14,6 +14,7 @@ interface StrandCreateProps {
   onSuccess?: () => void;
   preselectedGroupId?: string;
   sharedImage?: File | null;
+  sharedContent?: string | null;
 }
 
 interface FileWithPreview {
@@ -24,8 +25,8 @@ interface FileWithPreview {
   videoMetadata?: { duration?: number; width?: number; height?: number };
 }
 
-export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImage }: StrandCreateProps) {
-  const [content, setContent] = useState('');
+export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImage, sharedContent }: StrandCreateProps) {
+  const [content, setContent] = useState(sharedContent || '');
   const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
@@ -57,6 +58,13 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedGroupId, groups]);
+
+  // Process shared content when provided
+  useEffect(() => {
+    if (sharedContent && !content) {
+      setContent(sharedContent);
+    }
+  }, [sharedContent, content]);
 
   // Process shared image when provided
   useEffect(() => {

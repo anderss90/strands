@@ -11,6 +11,7 @@ function UploadPageContent() {
   const searchParams = useSearchParams();
   const groupId = searchParams.get('groupId');
   const [sharedImage, setSharedImage] = useState<File | null>(null);
+  const [sharedContent, setSharedContent] = useState<string | null>(null);
 
   // Check for shared image/video from sessionStorage
   useEffect(() => {
@@ -97,6 +98,38 @@ function UploadPageContent() {
             }
           }
         }
+        
+        // Handle shared content (text/URLs from Spotify, YouTube, etc.)
+        let sharedContentData: string | null = null;
+        try {
+          sharedContentData = sessionStorage.getItem('sharedContent');
+        } catch (storageError) {
+          // Ignore storage errors
+        }
+        
+        if (sharedContentData) {
+          try {
+            const contentData = JSON.parse(sharedContentData);
+            if (contentData.content) {
+              setSharedContent(contentData.content);
+              
+              // Clear sessionStorage after retrieving
+              try {
+                sessionStorage.removeItem('sharedContent');
+              } catch (clearError) {
+                console.warn('Failed to clear sessionStorage:', clearError);
+              }
+            }
+          } catch (error) {
+            console.error('Error processing shared content:', error);
+            // Try to clear invalid data
+            try {
+              sessionStorage.removeItem('sharedContent');
+            } catch (clearError) {
+              // Ignore clear errors
+            }
+          }
+        }
       } catch (error) {
         console.error('Error in shared file effect:', error);
       }
@@ -126,6 +159,7 @@ function UploadPageContent() {
             onSuccess={handleSuccess} 
             preselectedGroupId={groupId || undefined}
             sharedImage={sharedImage}
+            sharedContent={sharedContent}
           />
         </div>
       </div>

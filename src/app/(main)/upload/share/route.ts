@@ -7,16 +7,79 @@ import { randomUUID } from 'crypto';
 const MAX_BASE64_SIZE = 4 * 1024 * 1024; // 4MB
 
 // This route handler receives the POST request from Web Share Target API
-// The browser sends multipart/form-data with the shared image file
+// The browser sends multipart/form-data with shared content (text, URL, or file)
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    // Web Share Target API: the "name" property in the files array is the form field name
-    // In manifest, we have files: [{ name: "image", ... }], so the field is "image"
+    // Web Share Target API: can receive text, url, title, and/or files
+    const text = formData.get('text') as string | null;
+    const url = formData.get('url') as string | null;
+    const title = formData.get('title') as string | null;
     const file = formData.get('image') as File | null;
 
+    // Handle text/URL sharing (from Spotify, YouTube, etc.)
+    if (!file && (text || url || title)) {
+      // Combine title, text, and URL into a single content string
+      let sharedContent = '';
+      
+      if (title) {
+        sharedContent += title;
+      }
+      
+      if (text) {
+        if (sharedContent) sharedContent += '\n\n';
+        sharedContent += text;
+      }
+      
+      if (url) {
+        if (sharedContent) sharedContent += '\n\n';
+        sharedContent += url;
+      }
+
+      // Return HTML page that stores the shared content in sessionStorage and redirects
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Processing shared content...</title>
+</head>
+<body>
+  <script>
+    try {
+      // Store shared content in sessionStorage
+      const sharedContentData = {
+        content: ${JSON.stringify(sharedContent)},
+        title: ${JSON.stringify(title || '')},
+        text: ${JSON.stringify(text || '')},
+        url: ${JSON.stringify(url || '')}
+      };
+      
+      sessionStorage.setItem('sharedContent', JSON.stringify(sharedContentData));
+      
+      // Redirect to upload page
+      window.location.href = '/upload?shared=true&type=text';
+    } catch (error) {
+      console.error('Error processing shared content:', error);
+      window.location.href = '/upload?error=processing_failed';
+    }
+  </script>
+  <p>Processing shared content...</p>
+</body>
+</html>
+      `;
+
+      return new NextResponse(html, {
+        headers: {
+          'Content-Type': 'text/html',
+        },
+      });
+    }
+
+    // Handle file sharing (existing functionality)
     if (!file) {
-      // If no file, redirect to upload page
+      // If no file and no text/URL, redirect to upload page
       return NextResponse.redirect(new URL('/upload', request.url));
     }
 
