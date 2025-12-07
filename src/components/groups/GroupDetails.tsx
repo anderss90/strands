@@ -121,9 +121,9 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-700">
-        <h2 className="text-xl font-bold text-gray-100 mb-1">{group.name}</h2>
-        <p className="text-sm text-gray-400">
+      <div className="bg-gray-800 rounded-lg shadow-sm py-4 border border-gray-700">
+        <h2 className="text-xl font-bold text-gray-100 mb-1 px-2">{group.name}</h2>
+        <p className="text-sm text-gray-400 px-2">
           {group.members?.length || 0} member{group.members?.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -135,9 +135,9 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
         + Create Strand
       </button>
 
-      <div className="bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-700">
+      <div className="bg-gray-800 rounded-lg shadow-sm py-4 border border-gray-700">
         {/* Tabs */}
-        <div className="flex gap-2 mb-4 border-b border-gray-700">
+        <div className="flex gap-2 mb-4 border-b border-gray-700 px-2">
           <button
             onClick={() => setActiveTab('all')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
@@ -255,12 +255,14 @@ export default function GroupDetails({ groupId, onBack }: GroupDetailsProps) {
             </div>
           </div>
         ) : (
-          <StrandFeed
-            ref={feedRef}
-            groupId={groupId}
-            pinnedOnly={activeTab === 'pinned'}
-            onStrandClick={(strandId) => setSelectedStrandId(strandId)}
-          />
+          <div className="-mx-4">
+            <StrandFeed
+              ref={feedRef}
+              groupId={groupId}
+              pinnedOnly={activeTab === 'pinned'}
+              onStrandClick={(strandId) => setSelectedStrandId(strandId)}
+            />
+          </div>
         )}
       </div>
 
