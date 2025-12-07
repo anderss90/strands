@@ -28,13 +28,16 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
   const [firing, setFiring] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [thumbnailErrors, setThumbnailErrors] = useState<Set<string>>(new Set());
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Update local state when strand prop changes
   useEffect(() => {
     setLocalFireCount(strand.fireCount || 0);
     setLocalHasUserFired(strand.hasUserFired || false);
-  }, [strand.fireCount, strand.hasUserFired]);
+    // Reset thumbnail errors when strand changes
+    setThumbnailErrors(new Set());
+  }, [strand.id, strand.fireCount, strand.hasUserFired]);
 
   // Prevent video autoplay on iOS
   useEffect(() => {
@@ -159,13 +162,17 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
             return (
               <div key={media.id || index} className="relative aspect-square bg-gray-800">
                 {isVideo ? (
-                  media.thumbnailUrl ? (
+                  media.thumbnailUrl && !thumbnailErrors.has(media.id || `video-${index}`) ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={media.thumbnailUrl}
                       alt=""
                       className="w-full h-full object-cover"
                       loading="lazy"
+                      onError={(e) => {
+                        console.warn('Thumbnail failed to load, falling back to video:', media.thumbnailUrl);
+                        setThumbnailErrors(prev => new Set(prev).add(media.id || `video-${index}`));
+                      }}
                     />
                   ) : (
                     <video
@@ -187,6 +194,9 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
                       onSeeked={(e) => {
                         e.currentTarget.pause();
                       }}
+                      onError={(e) => {
+                        console.error('Video failed to load:', media.mediaUrl || media.imageUrl);
+                      }}
                     />
                   )
                 ) : (
@@ -196,6 +206,9 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
                     alt={media.fileName || `Strand image ${index + 1}`}
                     className="w-full h-full object-cover"
                     loading="lazy"
+                    onError={(e) => {
+                      console.warn('Image failed to load:', media.thumbnailUrl || media.imageUrl || media.mediaUrl);
+                    }}
                   />
                 )}
                 {showMoreBadge && strand.images && (
