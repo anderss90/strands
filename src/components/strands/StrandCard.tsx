@@ -47,19 +47,37 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
       video.pause();
       video.currentTime = 0;
       
-      // Add play event listener to catch any autoplay attempts
-      const handlePlay = () => {
-        // If video tries to play automatically, pause it immediately
-        if (video.paused === false) {
+      // Track if user has interacted with the page
+      // Only allow playback after user interaction
+      let userInteracted = false;
+      
+      const handleUserInteraction = () => {
+        userInteracted = true;
+        // Remove listeners after first interaction
+        document.removeEventListener('touchstart', handleUserInteraction);
+        document.removeEventListener('click', handleUserInteraction);
+      };
+      
+      document.addEventListener('touchstart', handleUserInteraction, { once: true });
+      document.addEventListener('click', handleUserInteraction, { once: true });
+      
+      // Add play event listener to catch autoplay attempts before user interaction
+      const handlePlay = (e: Event) => {
+        // If video tries to play before user interaction, pause it immediately
+        if (!userInteracted && !video.paused) {
+          e.preventDefault();
+          e.stopPropagation();
           video.pause();
           video.currentTime = 0;
         }
       };
       
-      video.addEventListener('play', handlePlay);
+      video.addEventListener('play', handlePlay, true); // Use capture phase
       
       return () => {
-        video.removeEventListener('play', handlePlay);
+        document.removeEventListener('touchstart', handleUserInteraction);
+        document.removeEventListener('click', handleUserInteraction);
+        video.removeEventListener('play', handlePlay, true);
       };
     }
   }, []);
@@ -212,16 +230,6 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
                           video.pause();
                           video.currentTime = 0;
                         }
-                      }}
-                      onPlay={(e) => {
-                        // Aggressively prevent autoplay - pause immediately if video starts playing
-                        // Only allow play if user explicitly clicked (we can't detect this perfectly, but
-                        // we'll pause anyway and let controls handle user-initiated playback)
-                        const video = e.currentTarget;
-                        // Always pause on play event to prevent autoplay
-                        // User can still play via controls
-                        video.pause();
-                        video.currentTime = 0;
                       }}
                       onSeeked={(e) => {
                         e.currentTarget.pause();

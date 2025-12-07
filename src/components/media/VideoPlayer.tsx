@@ -36,6 +36,20 @@ export default function VideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
+    // Track if user has interacted with the page
+    // Only allow autoplay after user interaction (iOS Safari requirement)
+    let userInteracted = false;
+
+    const handleUserInteraction = () => {
+      userInteracted = true;
+      // Remove listeners after first interaction
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('click', handleUserInteraction);
+    };
+
+    document.addEventListener('touchstart', handleUserInteraction, { once: true });
+    document.addEventListener('click', handleUserInteraction, { once: true });
+
     // Aggressively prevent autoplay on iOS Safari
     // iOS Safari can autoplay muted videos even when autoplay is false
     if (!autoplay) {
@@ -63,10 +77,12 @@ export default function VideoPlayer({
       }
     };
 
-    const handlePlay = () => {
-      // If autoplay is disabled and video starts playing, immediately pause it
+    const handlePlay = (e: Event) => {
+      // If autoplay is disabled and video tries to play before user interaction, pause it
       // This catches iOS Safari's aggressive autoplay behavior
-      if (!autoplay && video.paused === false) {
+      if (!autoplay && !userInteracted && !video.paused) {
+        e.preventDefault();
+        e.stopPropagation();
         video.pause();
         video.currentTime = 0;
         return;
@@ -93,15 +109,17 @@ export default function VideoPlayer({
 
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('canplay', handleCanPlay);
-    video.addEventListener('play', handlePlay);
+    video.addEventListener('play', handlePlay, true); // Use capture phase to catch early
     video.addEventListener('pause', handlePause);
     video.addEventListener('ended', handleEnded);
     video.addEventListener('error', handleError);
 
     return () => {
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('click', handleUserInteraction);
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('canplay', handleCanPlay);
-      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('play', handlePlay, true);
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('ended', handleEnded);
       video.removeEventListener('error', handleError);
