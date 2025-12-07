@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabase } from '@/lib/supabase';
+import { randomUUID } from 'crypto';
+
+// Maximum file size for base64 conversion (4MB)
+// Files larger than this or videos should use direct upload
+const MAX_BASE64_SIZE = 4 * 1024 * 1024; // 4MB
 
 // This route handler receives the POST request from Web Share Target API
 // The browser sends multipart/form-data with the shared image file
@@ -33,10 +39,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.redirect(new URL('/upload?error=invalid_file_type', request.url));
     }
 
-    // Convert file to base64 for passing to client
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    
     // Determine MIME type
     let mimeType = file.type;
     if (!mimeType) {
@@ -52,6 +54,97 @@ export async function POST(request: NextRequest) {
       };
       mimeType = extensionToMime[fileExtension] || (isValidVideo ? 'video/mp4' : 'image/jpeg');
     }
+
+    // Check if file is a video or too large for base64 conversion
+    // Videos and large files should use direct upload to Supabase Storage
+    const shouldUseDirectUpload = isValidVideo || file.size > MAX_BASE64_SIZE;
+
+    if (shouldUseDirectUpload) {
+      // For videos or large files, we can't convert to base64 (would cause 413 error)
+      // Instead, upload directly to Supabase Storage from the serverless function
+      try {
+        const supabase = createServerSupabase();
+        const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'images';
+        
+        // Generate unique filename
+        const fileExtension = file.name.split('.').pop()?.toLowerCase() || (isValidVideo ? 'mp4' : 'jpg');
+        const fileName = `${randomUUID()}.${fileExtension}`;
+        const filePath = `shared/${fileName}`; // Store in a "shared" folder
+        
+        // Convert file to buffer
+        const arrayBuffer = await file.arrayBuffer();
+        const fileBuffer = Buffer.from(arrayBuffer);
+        
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(storageBucket)
+          .upload(filePath, fileBuffer, {
+            contentType: mimeType,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error('Supabase Storage upload error:', uploadError);
+          return NextResponse.redirect(new URL('/upload?error=upload_failed', request.url));
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from(storageBucket)
+          .getPublicUrl(filePath);
+
+        const fileUrl = urlData.publicUrl;
+
+        // Return HTML page that stores the file URL in sessionStorage and redirects
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Processing shared ${isValidVideo ? 'video' : 'file'}...</title>
+</head>
+<body>
+  <script>
+    try {
+      // Store shared file data in sessionStorage (using URL instead of base64)
+      const fileData = {
+        name: ${JSON.stringify(file.name)},
+        type: ${JSON.stringify(mimeType)},
+        size: ${file.size},
+        url: ${JSON.stringify(fileUrl)},
+        path: ${JSON.stringify(filePath)},
+        isVideo: ${isValidVideo}
+      };
+      
+      sessionStorage.setItem('sharedFile', JSON.stringify(fileData));
+      
+      // Redirect to upload page
+      window.location.href = '/upload?shared=true&type=${isValidVideo ? 'video' : 'large'}';
+    } catch (error) {
+      console.error('Error processing shared file:', error);
+      window.location.href = '/upload?error=processing_failed';
+    }
+  </script>
+  <p>Processing shared ${isValidVideo ? 'video' : 'file'}...</p>
+</body>
+</html>
+        `;
+
+        return new NextResponse(html, {
+          headers: {
+            'Content-Type': 'text/html',
+          },
+        });
+      } catch (uploadError: any) {
+        console.error('Error uploading file to storage:', uploadError);
+        return NextResponse.redirect(new URL('/upload?error=upload_failed', request.url));
+      }
+    }
+
+    // For smaller images, convert to base64 as before
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
 
     // Return HTML page that stores the file in sessionStorage and redirects
     const html = `

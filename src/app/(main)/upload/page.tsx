@@ -12,57 +12,97 @@ function UploadPageContent() {
   const groupId = searchParams.get('groupId');
   const [sharedImage, setSharedImage] = useState<File | null>(null);
 
-  // Check for shared image from sessionStorage
+  // Check for shared image/video from sessionStorage
   useEffect(() => {
-    try {
-      // Safely access sessionStorage
-      let sharedImageData: string | null = null;
+    const loadSharedFile = async () => {
       try {
-        sharedImageData = sessionStorage.getItem('sharedImage');
-      } catch (storageError) {
-        // sessionStorage might not be available (e.g., private browsing)
-        console.warn('Unable to access sessionStorage:', storageError);
-        return;
-      }
-
-      if (sharedImageData) {
+        // Safely access sessionStorage
+        let sharedImageData: string | null = null;
+        let sharedFileData: string | null = null;
         try {
-          const imageData = JSON.parse(sharedImageData);
-          
-          // Safely use atob
-          if (typeof window === 'undefined' || typeof window.atob !== 'function') {
-            throw new Error('atob is not available');
-          }
-          
-          // Convert base64 back to File
-          const binaryString = window.atob(imageData.data);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const blob = new Blob([bytes], { type: imageData.type });
-          const file = new File([blob], imageData.name, { type: imageData.type });
-          setSharedImage(file);
-          
-          // Clear sessionStorage after retrieving
+          sharedImageData = sessionStorage.getItem('sharedImage');
+          sharedFileData = sessionStorage.getItem('sharedFile');
+        } catch (storageError) {
+          // sessionStorage might not be available (e.g., private browsing)
+          console.warn('Unable to access sessionStorage:', storageError);
+          return;
+        }
+
+        // Handle shared file (videos/large files stored as URL)
+        if (sharedFileData) {
           try {
-            sessionStorage.removeItem('sharedImage');
-          } catch (clearError) {
-            console.warn('Failed to clear sessionStorage:', clearError);
-          }
-        } catch (error) {
-          console.error('Error processing shared image:', error);
-          // Try to clear invalid data
-          try {
-            sessionStorage.removeItem('sharedImage');
-          } catch (clearError) {
-            // Ignore clear errors
+            const fileData = JSON.parse(sharedFileData);
+            
+            if (fileData.url) {
+              // Fetch the file from the URL
+              const response = await fetch(fileData.url);
+              if (!response.ok) {
+                throw new Error('Failed to fetch shared file');
+              }
+              
+              const blob = await response.blob();
+              const file = new File([blob], fileData.name, { type: fileData.type });
+              setSharedImage(file);
+              
+              // Clear sessionStorage after retrieving
+              try {
+                sessionStorage.removeItem('sharedFile');
+              } catch (clearError) {
+                console.warn('Failed to clear sessionStorage:', clearError);
+              }
+            }
+          } catch (error) {
+            console.error('Error processing shared file:', error);
+            // Try to clear invalid data
+            try {
+              sessionStorage.removeItem('sharedFile');
+            } catch (clearError) {
+              // Ignore clear errors
+            }
           }
         }
+        // Handle shared image (small images stored as base64)
+        else if (sharedImageData) {
+          try {
+            const imageData = JSON.parse(sharedImageData);
+            
+            // Safely use atob
+            if (typeof window === 'undefined' || typeof window.atob !== 'function') {
+              throw new Error('atob is not available');
+            }
+            
+            // Convert base64 back to File
+            const binaryString = window.atob(imageData.data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: imageData.type });
+            const file = new File([blob], imageData.name, { type: imageData.type });
+            setSharedImage(file);
+            
+            // Clear sessionStorage after retrieving
+            try {
+              sessionStorage.removeItem('sharedImage');
+            } catch (clearError) {
+              console.warn('Failed to clear sessionStorage:', clearError);
+            }
+          } catch (error) {
+            console.error('Error processing shared image:', error);
+            // Try to clear invalid data
+            try {
+              sessionStorage.removeItem('sharedImage');
+            } catch (clearError) {
+              // Ignore clear errors
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error in shared file effect:', error);
       }
-    } catch (error) {
-      console.error('Error in shared image effect:', error);
-    }
+    };
+
+    loadSharedFile();
   }, []);
 
   const handleSuccess = () => {
