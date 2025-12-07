@@ -625,7 +625,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         {compressing && (
           <div className="mb-3 p-3 bg-blue-900/20 border border-blue-700 text-blue-400 rounded-lg text-sm flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-            {files.some(f => f.isVideo) ? 'Processing media...' : 'Compressing images to reduce file size...'}
+            {files.some(f => f.isVideo) 
+              ? (files.every(f => f.isVideo) 
+                  ? 'Processing video...' 
+                  : 'Processing media...')
+              : 'Compressing images to reduce file size...'}
           </div>
         )}
         {uploading && uploadProgress > 0 && (
@@ -835,7 +839,11 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         ) : compressing ? (
           <span className="flex items-center justify-center gap-2">
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            Compressing Image...
+            {files.some(f => f.isVideo)
+              ? (files.every(f => f.isVideo)
+                  ? 'Processing video...'
+                  : 'Processing media...')
+              : 'Compressing image...'}
           </span>
         ) : (
           'Create Strand'
