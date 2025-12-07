@@ -32,9 +32,9 @@ export default function FriendsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-gray-800 rounded-lg shadow-sm p-6 mb-4 border border-gray-700">
+    <div className="min-h-screen bg-gray-900 pb-20">
+      <div className="py-4">
+        <div className="bg-gray-800 rounded-lg shadow-sm px-4 py-4 mb-4 border border-gray-700">
           <h1 className="text-2xl font-bold text-gray-100 mb-4">Friends</h1>
           
           {/* Tabs */}
