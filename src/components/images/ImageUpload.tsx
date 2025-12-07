@@ -7,6 +7,7 @@ import { useMediaPermissions } from '@/hooks/useMediaPermissions';
 import { compressImage, needsCompression } from '@/lib/utils/imageCompression';
 import { shouldUseDirectUpload } from '@/lib/utils/directUpload';
 import { useAuth } from '@/contexts/AuthContext';
+import { validateFileReadable, readFileAsDataURL } from '@/lib/utils/fileReading';
 
 interface ImageUploadProps {
   onSuccess?: () => void;
@@ -66,6 +67,21 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
       setCompressing(true);
       setError('');
 
+      // Validate file is readable (important for Android gallery files)
+      const fileValidation = await validateFileReadable(selectedFile);
+      if (!fileValidation.valid) {
+        setError(fileValidation.error || 'File is not accessible. Please try selecting it again.');
+        setCompressing(false);
+        // Clear input to allow retry
+        if (cameraInputRef.current) {
+          cameraInputRef.current.value = '';
+        }
+        if (galleryInputRef.current) {
+          galleryInputRef.current.value = '';
+        }
+        return;
+      }
+
       // Compress image if needed (automatically handles files over 4MB)
       let processedFile = selectedFile;
       if (needsCompression(selectedFile)) {
@@ -76,42 +92,23 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
       setFile(processedFile);
       setError('');
 
-      // Create preview with proper error handling
-      const reader = new FileReader();
-    
-    reader.onloadend = () => {
-      if (reader.result) {
-        setPreview(reader.result as string);
-      } else {
-        console.error('FileReader: No result');
-        setError('Failed to generate preview. Please try again.');
-        setFile(null);
-        setPreview(null);
-        if (cameraInputRef.current) {
-          cameraInputRef.current.value = '';
-        }
-        if (galleryInputRef.current) {
-          galleryInputRef.current.value = '';
-        }
+      // Create preview with retry logic
+      const dataURLResult = await readFileAsDataURL(processedFile);
+      if (!dataURLResult.success || !dataURLResult.data) {
+        throw new Error(dataURLResult.error || 'Failed to create image preview. Please try selecting the file again.');
       }
-    };
-    
-    reader.onerror = () => {
-      console.error('FileReader error:', reader.error);
-      setError('Failed to read file for preview. Please try again.');
-      setFile(null);
-      setPreview(null);
-      if (cameraInputRef.current) {
-        cameraInputRef.current.value = '';
-      }
-      if (galleryInputRef.current) {
-        galleryInputRef.current.value = '';
-      }
-    };
-    
-      reader.readAsDataURL(processedFile);
+
+      setPreview(dataURLResult.data as string);
     } catch (err: any) {
-      setError(err.message || 'Failed to process image. Please try again.');
+      const errorMessage = err.message || 'Failed to process image. Please try again.';
+      
+      // Provide more helpful error messages for permission issues
+      if (errorMessage.includes('permission') || errorMessage.includes('could not be read')) {
+        setError('File permission error. Please try selecting the file again. If the problem persists, try restarting the app.');
+      } else {
+        setError(errorMessage);
+      }
+      
       console.error('Error processing file:', err);
       setFile(null);
       setPreview(null);

@@ -9,6 +9,7 @@ import { compressImage, needsCompression } from '@/lib/utils/imageCompression';
 import { directUploadToSupabase, shouldUseDirectUpload, getVideoMetadata, getAudioMetadata, validateVideoSize, generateVideoThumbnail } from '@/lib/utils/directUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { isValidMedia, getMediaType, validateFileSize, MAX_VIDEO_SIZE } from '@/types/media';
+import { validateFileReadable, readFileAsArrayBuffer, readFileAsDataURL } from '@/lib/utils/fileReading';
 
 interface StrandCreateProps {
   onSuccess?: () => void;
@@ -135,6 +136,13 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
       return null;
     }
 
+    // Validate file is readable (important for Android gallery files)
+    const fileValidation = await validateFileReadable(selectedFile);
+    if (!fileValidation.valid) {
+      setError(fileValidation.error || 'File is not accessible. Please try selecting it again.');
+      return null;
+    }
+
     try {
       let videoMetadata: { duration?: number; width?: number; height?: number } | undefined;
       let audioMetadata: { duration?: number } | undefined;
@@ -173,11 +181,16 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         processedFile = await compressImage(selectedFile);
       }
 
-      // On iOS, File objects can become invalid after navigation
-      // Read file into memory immediately to persist it
-      const arrayBuffer = await processedFile.arrayBuffer();
+      // On iOS/Android, File objects can become invalid after navigation
+      // Read file into memory immediately to persist it using retry logic
+      const readResult = await readFileAsArrayBuffer(processedFile);
+      if (!readResult.success || !readResult.data) {
+        throw new Error(readResult.error || 'Failed to read file. Please try selecting it again.');
+      }
+      
+      const arrayBuffer = readResult.data as ArrayBuffer;
       const currentFileExtension = selectedFile.name.split('.').pop()?.toLowerCase() || '';
-      const blob = new Blob([arrayBuffer], { type: processedFile.type || (mediaType === 'video' ? `video/${currentFileExtension}` : `image/${currentFileExtension}`) });
+      const blob = new Blob([arrayBuffer], { type: processedFile.type || (mediaType === 'video' ? `video/${currentFileExtension}` : mediaType === 'audio' ? `audio/${currentFileExtension}` : `image/${currentFileExtension}`) });
       
       // Determine MIME type (normalize if missing)
       let normalizedMimeType = processedFile.type;
@@ -213,19 +226,12 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         // For audio, use a placeholder icon (no visual preview)
         preview = 'audio://placeholder';
       } else {
-        // For images, use FileReader to create data URL
-        preview = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            if (reader.result) {
-              resolve(reader.result as string);
-            } else {
-              reject(new Error('FileReader: No result'));
-            }
-          };
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(blob);
-        });
+        // For images, use FileReader with retry logic to create data URL
+        const dataURLResult = await readFileAsDataURL(blob);
+        if (!dataURLResult.success || !dataURLResult.data) {
+          throw new Error(dataURLResult.error || 'Failed to create image preview. Please try selecting the file again.');
+        }
+        preview = dataURLResult.data as string;
       }
 
       return {
@@ -243,7 +249,14 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
       };
     } catch (err: any) {
       console.error('Error processing file:', err);
-      setError(err.message || 'Failed to process file. Please try again.');
+      const errorMessage = err.message || 'Failed to process file. Please try again.';
+      
+      // Provide more helpful error messages for permission issues
+      if (errorMessage.includes('permission') || errorMessage.includes('could not be read')) {
+        setError('File permission error. Please try selecting the file again. If the problem persists, try restarting the app.');
+      } else {
+        setError(errorMessage);
+      }
       return null;
     }
   };
@@ -256,23 +269,42 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
     setError('');
 
     const processedFiles: FileWithPreview[] = [];
+    const failedFiles: string[] = [];
     
     for (const selectedFile of selectedFiles) {
+      // Validate file is readable before processing
+      const validation = await validateFileReadable(selectedFile);
+      if (!validation.valid) {
+        failedFiles.push(selectedFile.name);
+        setError(validation.error || `Failed to read ${selectedFile.name}. Please try selecting it again.`);
+        // Continue with other files instead of stopping
+        continue;
+      }
+
       const processed = await processFile(selectedFile);
       if (processed) {
         processedFiles.push(processed);
       } else {
-        // If one file fails, stop processing
-        break;
+        // Track failed files but continue processing others
+        failedFiles.push(selectedFile.name);
       }
     }
 
     if (processedFiles.length > 0) {
       setFiles(prev => [...prev, ...processedFiles]);
-      setError('');
+      // Only show error if some files failed
+      if (failedFiles.length > 0 && failedFiles.length === selectedFiles.length) {
+        // All files failed - error already set in processFile
+      } else if (failedFiles.length > 0) {
+        setError(`Successfully processed ${processedFiles.length} file(s), but ${failedFiles.length} file(s) failed: ${failedFiles.join(', ')}`);
+      } else {
+        setError('');
+      }
+    } else if (failedFiles.length > 0) {
+      // All files failed - error already set
     }
 
-    // Clear input
+    // Clear input to allow retry
     if (photoCameraInputRef.current) {
       photoCameraInputRef.current.value = '';
     }
@@ -877,7 +909,35 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
 
       {error && (
         <div className="bg-red-900/20 border border-red-700 text-red-400 px-4 py-3 rounded-lg text-sm">
-          {error}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1">
+              <p>{error}</p>
+              {(error.includes('permission') || error.includes('could not be read') || error.includes('not accessible')) && (
+                <p className="text-xs text-red-300 mt-2">
+                  Tip: Try selecting the file again, or restart the app if the problem persists.
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setError('');
+                // Clear file inputs to allow retry
+                if (photoCameraInputRef.current) {
+                  photoCameraInputRef.current.value = '';
+                }
+                if (videoCameraInputRef.current) {
+                  videoCameraInputRef.current.value = '';
+                }
+                if (galleryInputRef.current) {
+                  galleryInputRef.current.value = '';
+                }
+              }}
+              className="text-red-300 hover:text-red-200 underline text-xs flex-shrink-0 min-h-[44px] px-2"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
