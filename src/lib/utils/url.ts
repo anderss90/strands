@@ -169,17 +169,8 @@ export function isYouTubeUrl(url: string): boolean {
       hostname === 'www.youtube-nocookie.com'
     );
     
-    // Debug logging
-    if (process.env.NODE_ENV === 'development' && url.includes('youtube') && !isYouTube) {
-      console.log('isYouTubeUrl - URL not recognized:', { original: url, normalized: urlToCheck, hostname });
-    }
-    
     return isYouTube;
-  } catch (error) {
-    // Debug logging
-    if (process.env.NODE_ENV === 'development' && url.includes('youtube')) {
-      console.log('isYouTubeUrl - Error parsing URL:', { url, error });
-    }
+  } catch {
     return false;
   }
 }

@@ -70,7 +70,6 @@ export async function POST(request: NextRequest) {
     // Warn about large files but don't reject them
     // Large files should ideally use direct upload, but we'll handle them here if they come through
     if (file.size > RECOMMENDED_MAX_FILE_SIZE) {
-      console.warn(`Large file upload detected: ${(file.size / 1024 / 1024).toFixed(2)}MB. Consider using direct upload for better performance.`);
     }
 
     // Parse and validate group IDs

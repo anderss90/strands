@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 // GET /api/groups/[id] - Get group details with members
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -22,7 +22,7 @@ export async function GET(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const groupId = params.id;
+    const { id: groupId } = await params;
 
     // If not admin, verify user is a member of the group
     if (!authUser.isAdmin) {
@@ -110,7 +110,7 @@ export async function GET(
 // DELETE /api/groups/[id] - Delete a group (admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -127,7 +127,7 @@ export async function DELETE(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
-    const groupId = params.id;
+    const { id: groupId } = await params;
 
     // Verify user is admin of the group
     const membershipCheck = await query(

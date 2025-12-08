@@ -18,45 +18,6 @@ export default function EnhancedLinkText({ text, className = '', showThumbnails 
   const hasYouTubeUrl = urls.some(url => isYouTubeUrl(url.url));
   const hasEmbedUrl = hasSpotifyUrl || hasYouTubeUrl;
   
-  // Debug logging - always log YouTube-related URLs
-  if (urls.length > 0) {
-    const urlInfo = urls.map(u => {
-      const isYT = isYouTubeUrl(u.url);
-      const isSpot = isSpotifyUrl(u.url);
-      let hostname = 'unknown';
-      try {
-        hostname = new URL(u.url).hostname;
-      } catch {}
-      
-      // Always log if it looks like YouTube but wasn't detected
-      if (u.url.toLowerCase().includes('youtube') && !isYT) {
-        console.warn('EnhancedLinkText - YouTube URL not detected:', { 
-          url: u.url, 
-          hostname,
-          isYouTube: isYT,
-          isSpotify: isSpot
-        });
-      }
-      
-      // Always log YouTube URLs to help debug
-      if (u.url.toLowerCase().includes('youtube')) {
-        console.log('EnhancedLinkText - YouTube URL detected:', { 
-          url: u.url, 
-          hostname,
-          isYouTube: isYT,
-          isSpotify: isSpot,
-          willRenderAsEmbed: isYT
-        });
-      }
-      
-      return { url: u.url, isYouTube: isYT, isSpotify: isSpot, hostname };
-    });
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('EnhancedLinkText - Detected URLs:', urlInfo);
-    }
-  }
-  
   if (urls.length === 0) {
     return <span className={className}>{text}</span>;
   }
@@ -80,26 +41,10 @@ export default function EnhancedLinkText({ text, className = '', showThumbnails 
     const isSpot = isSpotifyUrl(url.url);
     
     if (isYT) {
-      console.log('EnhancedLinkText - Adding YouTube embed to parts:', url.url);
       parts.push({ type: 'youtube', url });
     } else if (isSpot) {
       parts.push({ type: 'spotify', url });
     } else {
-      // Log if it looks like YouTube but wasn't recognized
-      if (url.url.toLowerCase().includes('youtube')) {
-        console.warn('EnhancedLinkText - YouTube URL not recognized, rendering as regular link:', {
-          url: url.url,
-          isYT: isYT,
-          isSpot: isSpot,
-          hostname: (() => {
-            try {
-              return new URL(url.url).hostname;
-            } catch {
-              return 'unknown';
-            }
-          })()
-        });
-      }
       parts.push(url);
     }
     
@@ -146,7 +91,6 @@ export default function EnhancedLinkText({ text, className = '', showThumbnails 
               );
             } else {
               // Show full embed in detail view
-              console.log('EnhancedLinkText - Rendering YouTube embed for URL:', youtubeUrl.url);
               return (
                 <div 
                   key={index} 

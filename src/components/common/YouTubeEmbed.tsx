@@ -14,20 +14,16 @@ export default function YouTubeEmbed({ url, className = '' }: YouTubeEmbedProps)
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    console.log('YouTubeEmbed - Extracting video ID from URL:', url);
     const id = extractYouTubeVideoId(url);
-    console.log('YouTubeEmbed - Extracted video ID:', id);
     if (id) {
       setVideoId(id);
       setError(null);
     } else {
-      console.warn('YouTubeEmbed - Failed to extract video ID from URL:', url);
       setError('Invalid YouTube URL');
     }
   }, [url]);
 
   if (error || !videoId) {
-    console.warn('YouTubeEmbed - Rendering fallback link because:', { error, videoId, url });
     return (
       <div className={`bg-gray-800 rounded-lg p-4 ${className}`}>
         <a
@@ -42,8 +38,6 @@ export default function YouTubeEmbed({ url, className = '' }: YouTubeEmbedProps)
       </div>
     );
   }
-  
-  console.log('YouTubeEmbed - Rendering embed with video ID:', videoId);
 
   // YouTube embed URL with privacy-enhanced mode
   const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}`;

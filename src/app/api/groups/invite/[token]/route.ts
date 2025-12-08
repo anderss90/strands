@@ -4,10 +4,10 @@ import { query } from '@/lib/db';
 // GET /api/groups/invite/[token] - Validate token and return group info
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const token = params.token;
+    const { token: token } = await params;
 
     // Check if token exists and is not expired
     const inviteResult = await query(

@@ -14,7 +14,7 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif',
 // GET /api/strands/[id] - Get a specific strand
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -31,7 +31,7 @@ export async function GET(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const strandId = params.id;
+    const { id: strandId } = await params;
 
     // If admin, get strand directly. Otherwise, verify user has access
     let result;
@@ -260,7 +260,7 @@ export async function GET(
 // PUT /api/strands/[id] - Update a strand (only by owner)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -277,7 +277,7 @@ export async function PUT(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const strandId = params.id;
+    const { id: strandId } = await params;
 
     // Verify strand exists and user owns it (or is admin)
     const strandCheck = await query(
@@ -400,7 +400,6 @@ export async function PUT(
       // Warn about large files but don't reject them
       // Large files should ideally use direct upload, but we'll handle them here if they come through
       if (file.size > RECOMMENDED_MAX_FILE_SIZE) {
-        console.warn(`Large file upload detected: ${(file.size / 1024 / 1024).toFixed(2)}MB. Consider using direct upload for better performance.`);
       }
 
       // Generate unique filename
@@ -491,7 +490,7 @@ export async function PUT(
 // DELETE /api/strands/[id] - Delete a strand (only by owner)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -508,7 +507,7 @@ export async function DELETE(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const strandId = params.id;
+    const { id: strandId } = await params;
 
     // Verify strand exists
     const strandCheck = await query(

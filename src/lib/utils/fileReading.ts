@@ -59,7 +59,6 @@ export async function validateFileReadable(file: File): Promise<FileValidationRe
     const hasExtension = file.name.includes('.') && file.name.split('.').length > 1;
     if (!hasExtension) {
       // This is a warning, not a blocker
-      console.warn('File has no extension:', file.name);
     }
 
     return { valid: true };

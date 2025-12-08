@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 // POST /api/groups/[id]/leave - Leave a group
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -22,7 +22,7 @@ export async function POST(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
-    const groupId = params.id;
+    const { id: groupId } = await params;
 
     // Check if user is a member
     const membershipCheck = await query(

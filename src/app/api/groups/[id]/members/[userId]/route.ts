@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 // DELETE /api/groups/[id]/members/[userId] - Remove a member from a group
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; userId: string } }
+  { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -22,8 +22,8 @@ export async function DELETE(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
-    const groupId = params.id;
-    const targetUserId = params.userId;
+    const { id: groupId } = await params;
+    const { userId: targetUserId } = await params;
 
     // Verify user is admin or removing themselves
     const membershipCheck = await query(

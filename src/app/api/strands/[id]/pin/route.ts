@@ -6,7 +6,7 @@ import { pinStrandSchema } from '@/lib/validation';
 // POST /api/strands/[id]/pin - Pin a strand in a group
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -23,7 +23,7 @@ export async function POST(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const strandId = params.id;
+    const { id: strandId } = await params;
 
     // Parse request body
     let body;
@@ -123,7 +123,7 @@ export async function POST(
 // DELETE /api/strands/[id]/pin - Unpin a strand from a group
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -140,7 +140,7 @@ export async function DELETE(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const strandId = params.id;
+    const { id: strandId } = await params;
 
     // Parse request body
     let body;

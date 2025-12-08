@@ -93,7 +93,7 @@ export function useMediaPermissions() {
     } catch (error) {
       // Permissions API might not support 'camera' permission name in this browser
       // This is common on some iOS versions, Android browsers, or older browsers
-      console.log('Permissions API check failed, will rely on implicit permissions:', error);
+      // Permissions API check failed, will rely on implicit permissions
       setState({
         cameraPermission: 'unsupported',
         isChecking: false,

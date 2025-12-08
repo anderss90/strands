@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 // DELETE /api/strands/[id]/comments/[commentId] - Delete a comment on a strand
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; commentId: string } }
+  { params }: { params: Promise<{ id: string; commentId: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -22,8 +22,8 @@ export async function DELETE(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const strandId = params.id;
-    const commentId = params.commentId;
+    const { id: strandId } = await params;
+    const { commentId: commentId } = await params;
 
     // Verify comment exists and get its details
     const commentCheck = await query(

@@ -85,12 +85,10 @@ export async function notifyGroupMembers(
         };
 
         await webpush.sendNotification(pushSubscription, payload);
-        console.log(`Push notification sent successfully to user ${subscription.userId}`);
       } catch (error: any) {
         // Handle specific error cases
         if (error.statusCode === 410 || error.statusCode === 404) {
           // Subscription expired or invalid - remove it from database
-          console.log(`Removing expired subscription for user ${subscription.userId}`);
           await query(
             `DELETE FROM push_subscriptions WHERE endpoint = $1 AND user_id = $2`,
             [subscription.endpoint, subscription.userId]
@@ -181,12 +179,10 @@ export async function notifyUsers(
         };
 
         await webpush.sendNotification(pushSubscription, payload);
-        console.log(`Push notification sent successfully to user ${subscription.userId}`);
       } catch (error: any) {
         // Handle specific error cases
         if (error.statusCode === 410 || error.statusCode === 404) {
           // Subscription expired or invalid - remove it from database
-          console.log(`Removing expired subscription for user ${subscription.userId}`);
           await query(
             `DELETE FROM push_subscriptions WHERE endpoint = $1 AND user_id = $2`,
             [subscription.endpoint, subscription.userId]

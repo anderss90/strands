@@ -6,7 +6,7 @@ import { notifyUsers } from '@/lib/notifications';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -25,7 +25,7 @@ export async function PUT(
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
     const body = await request.json();
     const validatedData = updateFriendRequestSchema.parse(body);
-    const requestId = params.id;
+    const { id: requestId } = await params;
 
     // Get the friend request
     const requestResult = await query(

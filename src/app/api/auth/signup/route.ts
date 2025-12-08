@@ -60,14 +60,8 @@ export async function POST(request: NextRequest) {
             
             if (memberCheck.rows.length === 0) {
               console.error('Failed to add user to group via invite token');
-            } else {
-              console.log('User already a member of group (unexpected for new user)');
             }
-          } else {
-            console.log(`Successfully added user ${user.id} to group ${groupId} via invite token`);
           }
-        } else {
-          console.warn(`Invite token not found or expired: ${validatedData.inviteToken}`);
         }
       } catch (inviteError: any) {
         // Log error but don't fail signup if invite processing fails

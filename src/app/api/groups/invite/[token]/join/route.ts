@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 // POST /api/groups/invite/[token]/join - Join group using invite token
 export async function POST(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -22,7 +22,7 @@ export async function POST(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const token = params.token;
+    const { token: token } = await params;
 
     // Validate token (exists and not expired)
     const inviteResult = await query(

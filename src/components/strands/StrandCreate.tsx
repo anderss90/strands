@@ -157,10 +157,9 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
 
         try {
           videoMetadata = await getVideoMetadata(selectedFile);
-        } catch (err) {
-          console.warn('Failed to get video metadata:', err);
-          // Continue without metadata
-        }
+              } catch (err) {
+                // Continue without metadata
+              }
       }
 
       // For audio, get metadata (duration only)
@@ -168,16 +167,14 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
         try {
           const audioMeta = await getAudioMetadata(selectedFile);
           audioMetadata = { duration: audioMeta.duration };
-        } catch (err) {
-          console.warn('Failed to get audio metadata:', err);
-          // Continue without metadata
-        }
+              } catch (err) {
+                // Continue without metadata
+              }
       }
 
       // Compress image if needed (only for images, not videos)
       let processedFile = selectedFile;
       if (mediaType === 'image' && needsCompression(selectedFile)) {
-        console.log('Image exceeds size limit, compressing...');
         processedFile = await compressImage(selectedFile);
       }
 
@@ -453,9 +450,7 @@ export default function StrandCreate({ onSuccess, preselectedGroupId, sharedImag
                 });
                 
                 thumbnailUrl = thumbnailUploadResult.publicUrl;
-                console.log('Video thumbnail generated and uploaded successfully');
               } catch (thumbnailError) {
-                console.warn('Failed to generate video thumbnail, using video URL as fallback:', thumbnailError);
                 // Continue with video URL as thumbnail (fallback)
                 thumbnailUrl = uploadResult.publicUrl;
               }

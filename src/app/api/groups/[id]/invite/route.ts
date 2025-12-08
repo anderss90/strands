@@ -6,7 +6,7 @@ import { randomBytes } from 'crypto';
 // POST /api/groups/[id]/invite - Generate new invite token for group
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -23,7 +23,7 @@ export async function POST(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const groupId = params.id;
+    const { id: groupId } = await params;
 
     // Verify user is a member of the group
     const membershipCheck = await query(

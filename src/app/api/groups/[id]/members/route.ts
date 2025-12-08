@@ -6,7 +6,7 @@ import { addMembersToGroupSchema } from '@/lib/validation';
 // POST /api/groups/[id]/members - Add members to a group
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -23,7 +23,7 @@ export async function POST(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
-    const groupId = params.id;
+    const { id: groupId } = await params;
     const body = await request.json();
     const validatedData = addMembersToGroupSchema.parse(body);
 

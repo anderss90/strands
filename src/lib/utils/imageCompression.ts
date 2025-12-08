@@ -45,23 +45,16 @@ export async function compressImage(
   const isVideo = file.type.startsWith('video/') || videoExtensions.includes(fileExtension);
   
   if (isVideo) {
-    console.log('Skipping compression for video file');
     return file;
   }
   
   // If file is already under the limit, return as-is
   if (file.size <= MAX_FILE_SIZE) {
-    console.log('Image is already under size limit, skipping compression');
     return file;
   }
-
-  console.log(`Compressing image: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
   
   // Check web worker support
   const webWorkerSupported = isWebWorkerSupported();
-  if (!webWorkerSupported) {
-    console.log('Web workers not supported, compression will run on main thread');
-  }
 
   // Try compression with web worker first, fallback to no web worker if it fails
   // Disable web worker if not supported or explicitly disabled
@@ -84,20 +77,12 @@ export async function compressImage(
       compressedFile = await imageCompression(file, compressionOptions);
     } catch (webWorkerError: any) {
       // If web worker fails, try without web worker
-      console.warn('Web worker compression failed, trying without web worker:', webWorkerError);
       compressionOptions.useWebWorker = false;
       compressedFile = await imageCompression(file, compressionOptions);
     }
-    
-    const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
-    const compressedSizeMB = (compressedFile.size / 1024 / 1024).toFixed(2);
-    const reduction = ((1 - compressedFile.size / file.size) * 100).toFixed(1);
-    
-    console.log(`Image compressed: ${originalSizeMB}MB → ${compressedSizeMB}MB (${reduction}% reduction)`);
 
     // If still too large after compression, try more aggressive compression
     if (compressedFile.size > MAX_FILE_SIZE) {
-      console.warn('Image still too large after initial compression, applying more aggressive compression');
       
       const aggressiveOptions = {
         ...compressionOptions,
@@ -109,16 +94,10 @@ export async function compressImage(
       
       try {
         const moreCompressed = await imageCompression(file, aggressiveOptions);
-        
-        const finalSizeMB = (moreCompressed.size / 1024 / 1024).toFixed(2);
-        const finalReduction = ((1 - moreCompressed.size / file.size) * 100).toFixed(1);
-        console.log(`Aggressive compression: ${originalSizeMB}MB → ${finalSizeMB}MB (${finalReduction}% reduction)`);
-        
         return moreCompressed;
       } catch (aggressiveError) {
         // If aggressive compression also fails, return the first compressed result
         // (even if it's slightly over the limit, it's better than nothing)
-        console.warn('Aggressive compression failed, using initial compression result:', aggressiveError);
         return compressedFile;
       }
     }

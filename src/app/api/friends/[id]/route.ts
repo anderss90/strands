@@ -4,7 +4,7 @@ import { query } from '@/lib/db';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -21,7 +21,7 @@ export async function DELETE(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
-    const friendId = params.id;
+    const { id: friendId } = await params;
 
     // Get the friendship
     const friendshipResult = await query(

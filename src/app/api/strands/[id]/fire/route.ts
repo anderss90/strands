@@ -6,7 +6,7 @@ import { notifyUsers } from '@/lib/notifications';
 // POST /api/strands/[id]/fire - Add a fire reaction to a strand
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -23,7 +23,7 @@ export async function POST(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const strandId = params.id;
+    const { id: strandId } = await params;
 
     // Verify user has access to the strand (if not admin)
     if (!authUser.isAdmin) {
@@ -126,7 +126,7 @@ export async function POST(
 // DELETE /api/strands/[id]/fire - Remove a fire reaction from a strand
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -143,7 +143,7 @@ export async function DELETE(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const strandId = params.id;
+    const { id: strandId } = await params;
 
     // Remove fire reaction
     const deleteResult = await query(

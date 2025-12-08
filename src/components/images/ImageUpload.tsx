@@ -85,7 +85,6 @@ export default function ImageUpload({ onSuccess }: ImageUploadProps) {
       // Compress image if needed (automatically handles files over 4MB)
       let processedFile = selectedFile;
       if (needsCompression(selectedFile)) {
-        console.log('Image exceeds size limit, compressing...');
         processedFile = await compressImage(selectedFile);
       }
 

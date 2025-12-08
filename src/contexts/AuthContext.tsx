@@ -60,9 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Don't await to avoid blocking auth check
               enableNotificationsAuto().catch((error) => {
                 // Silently fail - notifications are optional
-                if (process.env.NODE_ENV !== 'test') {
-                  console.log('Failed to enable notifications automatically:', error);
-                }
               });
             }
           } catch (error) {

@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 // GET /api/images/[id] - Get a specific image
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -22,7 +22,7 @@ export async function GET(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const imageId = params.id;
+    const { id: imageId } = await params;
 
     // If admin, get image directly. Otherwise, verify user has access (must be shared in a group user is a member of)
     let result;
@@ -129,7 +129,7 @@ export async function GET(
 // DELETE /api/images/[id] - Delete an image (only by owner)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -146,7 +146,7 @@ export async function DELETE(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string } };
-    const imageId = params.id;
+    const { id: imageId } = await params;
 
     // Verify user owns the image
     const ownershipCheck = await query(

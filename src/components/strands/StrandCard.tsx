@@ -219,10 +219,9 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
                       alt=""
                       className="w-full h-full object-cover"
                       loading="lazy"
-                      onError={(e) => {
-                        console.warn('Thumbnail failed to load, falling back to video:', media.thumbnailUrl);
-                        setThumbnailErrors(prev => new Set(prev).add(media.id || `video-${index}`));
-                      }}
+                        onError={(e) => {
+                          setThumbnailErrors(prev => new Set(prev).add(media.id || `video-${index}`));
+                        }}
                     />
                   ) : (
                     <video
@@ -257,7 +256,6 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
                     className="w-full h-full object-cover"
                     loading="lazy"
                     onError={(e) => {
-                      console.warn('Image failed to load:', media.thumbnailUrl || media.imageUrl || media.mediaUrl);
                     }}
                   />
                 )}

@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 // GET /api/images/[id]/comments - Get comments for an image
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -22,7 +22,7 @@ export async function GET(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const imageId = params.id;
+    const { id: imageId } = await params;
 
     // If not admin, verify user has access to the image (must be shared in a group user is a member of)
     if (!authUser.isAdmin) {
@@ -89,7 +89,7 @@ export async function GET(
 // POST /api/images/[id]/comments - Create a comment on an image
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -106,7 +106,7 @@ export async function POST(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const imageId = params.id;
+    const { id: imageId } = await params;
 
     // If not admin, verify user has access to the image
     if (!authUser.isAdmin) {

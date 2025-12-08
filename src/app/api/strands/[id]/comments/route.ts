@@ -6,7 +6,7 @@ import { notifyGroupMembers, notifyUsers } from '@/lib/notifications';
 // GET /api/strands/[id]/comments - Get comments for a strand
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -23,7 +23,7 @@ export async function GET(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const strandId = params.id;
+    const { id: strandId } = await params;
     const { searchParams } = new URL(request.url);
     const groupId = searchParams.get('groupId');
 
@@ -157,7 +157,7 @@ export async function GET(
 // POST /api/strands/[id]/comments - Create a comment on a strand
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -174,7 +174,7 @@ export async function POST(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const strandId = params.id;
+    const { id: strandId } = await params;
 
     // If not admin, verify user has access to the strand
     if (!authUser.isAdmin) {

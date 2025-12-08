@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 // GET /api/images/group/[groupId] - Get images shared in a specific group
 export async function GET(
   request: NextRequest,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -22,7 +22,7 @@ export async function GET(
     }
 
     const { user: authUser } = authResult as { user: { userId: string; email: string; username: string; isAdmin: boolean } };
-    const groupId = params.groupId;
+    const { groupId: groupId } = await params;
 
     // If not admin, verify user is a member of the group
     if (!authUser.isAdmin) {
