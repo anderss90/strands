@@ -1,19 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
     return null;
   }
 
+  const handleHomeClick = (e: React.MouseEvent) => {
+    // If we're already on home, dispatch an event to close any open strand viewers
+    if (pathname === '/home') {
+      e.preventDefault();
+      // Dispatch custom event to close strand viewer
+      window.dispatchEvent(new CustomEvent('closeStrandViewer'));
+    }
+  };
+
   const navItems = [
-    { href: '/home', label: 'Home', icon: '🏠' },
+    { href: '/home', label: 'Home', icon: '🏠', onClick: handleHomeClick },
     { href: '/friends', label: 'Friends', icon: '👥' },
     { href: '/groups', label: 'Groups', icon: '👨‍👩‍👧‍👦' },
     { href: '/upload', label: 'Upload', icon: '📷' },
@@ -30,6 +40,7 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={item.onClick}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[48px] transition-all duration-200 relative ${
                 isActive
                   ? 'text-blue-400 scale-105'

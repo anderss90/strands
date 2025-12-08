@@ -51,6 +51,18 @@ function HomePageContent() {
     };
   }, []);
 
+  // Listen for close strand viewer event from bottom nav
+  useEffect(() => {
+    const handleCloseStrandViewer = () => {
+      setSelectedStrandId(null);
+    };
+
+    window.addEventListener('closeStrandViewer', handleCloseStrandViewer);
+    return () => {
+      window.removeEventListener('closeStrandViewer', handleCloseStrandViewer);
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

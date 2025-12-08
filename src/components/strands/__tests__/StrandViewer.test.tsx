@@ -150,8 +150,10 @@ describe('StrandViewer', () => {
       expect(mockOnClose).toHaveBeenCalled();
     });
 
-    // Should push state back to prevent navigation
-    expect(mockPushState).toHaveBeenCalledTimes(2); // Once on mount, once on back
+    // When on /home, we navigate to /home and don't push state back
+    // So pushState is only called once (on mount)
+    expect(mockPushState).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/home');
   });
 
   it('navigates to home when onClose is not provided and back is pressed', async () => {

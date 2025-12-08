@@ -188,11 +188,21 @@ export default function StrandViewer({ strandId, groupId, onClose, onEdit, onRef
 
     const handlePopState = (event: PopStateEvent) => {
       // When back button is pressed while viewing a strand, close the viewer
-      // and prevent navigation by pushing our state back
       isHandlingBackRef.current = true;
+      
+      // If we're on /home, navigate to /home to ensure we're on the home tab
+      if (pathname === '/home') {
+        router.push('/home');
+      }
+      
       handleClose();
-      // Push state back to prevent browser from navigating away
-      window.history.pushState(historyState, '', window.location.href);
+      
+      // If we're not on /home, push state back to prevent browser from navigating away
+      // If we're on /home, we want to allow navigation to /home
+      if (pathname !== '/home') {
+        window.history.pushState(historyState, '', window.location.href);
+      }
+      
       // Reset flag after a brief delay
       setTimeout(() => {
         isHandlingBackRef.current = false;
@@ -432,6 +442,16 @@ export default function StrandViewer({ strandId, groupId, onClose, onEdit, onRef
   };
 
   const handleClose = () => {
+    // If we're on the home page, close the viewer and ensure we're on the home tab
+    if (pathname === '/home') {
+      if (onClose) {
+        onClose();
+      }
+      // Navigate to /home to ensure we're on the home tab (even if already there)
+      router.push('/home');
+      return;
+    }
+    
     if (onClose) {
       onClose();
     } else {
