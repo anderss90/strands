@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/middleware';
 import { query } from '@/lib/db';
-import { notifyGroupMembers, notifyUsers } from '@/lib/notifications';
+import { notifyUsers } from '@/lib/notifications';
 
 // GET /api/strands/[id]/comments - Get comments for a strand
 export async function GET(
@@ -298,21 +298,17 @@ export async function POST(
 
     const user = userResult.rows[0];
 
-    // Get strand info and group IDs for notifications
+    // Get strand author for notifications
     const strandResult = await query(
-      `SELECT s.user_id as strand_user_id, s.content as strand_content,
-              array_agg(DISTINCT sgs.group_id) as group_ids
-       FROM strands s
-       INNER JOIN strand_group_shares sgs ON s.id = sgs.strand_id
-       WHERE s.id = $1
-       GROUP BY s.id, s.user_id, s.content`,
+      `SELECT user_id as strand_user_id
+       FROM strands
+       WHERE id = $1`,
       [strandId]
     );
 
     if (strandResult.rows.length > 0) {
       const strand = strandResult.rows[0];
       const strandAuthorId = strand.strand_user_id;
-      const groupIds = strand.group_ids || [];
 
       // Get all users who have commented on this strand in the same group context
       // (excluding the current comment author)
@@ -367,43 +363,6 @@ export async function POST(
               strandId: strandId,
               commentId: comment.id,
               url: `/home?strand=${strandId}`,
-            },
-          }
-        );
-      }
-
-      // Send notifications to groups where this strand is shared
-      // If groupId is provided, only notify that specific group
-      // Otherwise, notify all groups
-      const excludeUserIds = [
-        authUser.userId,
-        strandAuthorId,
-        ...previousCommenterIds.filter(id => id !== authUser.userId && id !== strandAuthorId)
-      ];
-      
-      const groupsToNotify = validatedGroupId ? [validatedGroupId] : groupIds;
-      
-      for (const notifyGroupId of groupsToNotify) {
-        // Get group name
-        const groupResult = await query(
-          `SELECT name FROM groups WHERE id = $1`,
-          [notifyGroupId]
-        );
-        const groupName = groupResult.rows[0]?.name || 'a group';
-
-        // Send notification to all group members except those already notified
-        await notifyGroupMembers(
-          notifyGroupId,
-          excludeUserIds,
-          {
-            title: 'New comment in ' + groupName,
-            body: `${user.display_name} commented on a strand`,
-            data: {
-              type: 'comment',
-              strandId: strandId,
-              commentId: comment.id,
-              groupId: notifyGroupId,
-              url: validatedGroupId ? `/groups/${validatedGroupId}` : `/home?strand=${strandId}`,
             },
           }
         );
