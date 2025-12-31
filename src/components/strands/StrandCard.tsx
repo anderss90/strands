@@ -6,6 +6,7 @@ import EnhancedLinkText from '@/components/common/EnhancedLinkText';
 import { strandApi } from '@/lib/api';
 import { detectUrls, isYouTubeUrl, isSpotifyUrl } from '@/lib/utils/url';
 import AudioPlayer from '@/components/media/AudioPlayer';
+import { formatDateTime } from '@/lib/utils/dateFormat';
 
 interface StrandCardProps {
   strand: Strand;
@@ -164,7 +165,7 @@ export default function StrandCard({ strand, onClick, onFireUpdate }: StrandCard
               </div>
             )}
             <p className="text-gray-300 text-xs font-medium truncate">
-              {strand.user?.displayName || 'Unknown'}
+              {strand.user?.displayName || 'Unknown'} • {formatDateTime(strand.createdAt)}
             </p>
           </div>
           <button
