@@ -97,6 +97,20 @@ export const authApi = {
       method: 'POST',
     });
   },
+
+  forgotPassword: async (email: string) => {
+    return apiRequest<{ message: string }>('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword: async (token: string, password: string) => {
+    return apiRequest<{ message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+  },
 };
 
 // User API functions
@@ -115,7 +129,7 @@ export const userApi = {
     }>('/api/users/profile');
   },
 
-  updateProfile: async (data: { displayName?: string; profilePictureUrl?: string }) => {
+  updateProfile: async (data: { displayName?: string; profilePictureUrl?: string; email?: string }) => {
     return apiRequest<{
       id: string;
       email: string;

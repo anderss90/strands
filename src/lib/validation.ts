@@ -15,6 +15,7 @@ export const loginSchema = z.object({
 export const updateProfileSchema = z.object({
   displayName: z.string().min(1, 'Display name is required').max(100, 'Display name must be less than 100 characters').optional(),
   profilePictureUrl: z.string().url('Invalid URL').optional(),
+  email: z.string().email('Invalid email address').max(255, 'Email must be less than 255 characters').optional(),
 });
 
 // Friend validation schemas
@@ -88,6 +89,16 @@ export const searchSchema = z.object({
 // Invite validation schemas
 export const inviteTokenSchema = z.string().min(1, 'Invite token is required').max(255, 'Invalid invite token');
 
+// Password reset validation schemas
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address').min(1, 'Email is required'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
 // Type exports
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -102,4 +113,6 @@ export type CreateStrandInput = z.infer<typeof createStrandSchema>;
 export type UpdateStrandInput = z.infer<typeof updateStrandSchema>;
 export type PinStrandInput = z.infer<typeof pinStrandSchema>;
 export type SearchInput = z.infer<typeof searchSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 

@@ -25,6 +25,11 @@ VAPID_PRIVATE_KEY=your_vapid_private_key
 
 # Application URL
 NEXTAUTH_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Email Service (Resend)
+# Get your API key from https://resend.com/api-keys
+RESEND_API_KEY=re_your_resend_api_key
 ```
 
 ## Getting Supabase Credentials
@@ -39,10 +44,20 @@ NEXTAUTH_URL=http://localhost:3000
    - Connection string (DATABASE_URL)
    - Connection pooler URL (DATABASE_POOLER_URL) - Use port 6543 for transaction mode
 
+## Getting Resend API Key
+
+1. Go to [Resend Dashboard](https://resend.com)
+2. Sign up or log in to your account
+3. Go to API Keys section
+4. Create a new API key
+5. Copy the API key and add it to `RESEND_API_KEY` in your `.env.local` file
+6. Note: You'll need to verify a domain in Resend to send emails from a custom domain. For testing, you can use the default Resend domain.
+
 ## Security Notes
 
 - Never commit `.env.local` to version control
 - The service_role key should only be used server-side
 - Use the connection pooler URL for serverless functions (port 6543)
 - Use the direct connection URL for migrations and admin tasks
+- Keep your Resend API key secret and never expose it in client-side code
 

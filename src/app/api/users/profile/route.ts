@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, getAuthenticatedUser } from '@/lib/middleware';
-import { getUserById } from '@/lib/auth';
+import { getUserById, updateUserEmail } from '@/lib/auth';
 import { updateProfileSchema } from '@/lib/validation';
 import { query } from '@/lib/db';
 
@@ -90,7 +90,42 @@ export async function PUT(request: NextRequest) {
       paramIndex++;
     }
 
-    if (updateFields.length === 0) {
+    // Handle email update separately to check uniqueness
+    if (validatedData.email !== undefined) {
+      const newEmail = validatedData.email.trim().toLowerCase();
+      
+      // Check if email is different from current email
+      if (newEmail !== authUser.email) {
+        // Check if email is already taken by another user
+        const emailCheckResult = await query(
+          'SELECT id FROM users WHERE email = $1 AND id != $2',
+          [newEmail, authUser.userId]
+        );
+
+        if (emailCheckResult.rows.length > 0) {
+          return NextResponse.json(
+            { message: 'Email address is already in use' },
+            { status: 400 }
+          );
+        }
+
+        // Update email using the dedicated function
+        try {
+          await updateUserEmail(authUser.userId, newEmail);
+        } catch (error: any) {
+          // Handle unique constraint violation
+          if (error.code === '23505' || error.message?.includes('unique')) {
+            return NextResponse.json(
+              { message: 'Email address is already in use' },
+              { status: 400 }
+            );
+          }
+          throw error;
+        }
+      }
+    }
+
+    if (updateFields.length === 0 && validatedData.email === undefined) {
       return NextResponse.json(
         { message: 'No fields to update' },
         { status: 400 }

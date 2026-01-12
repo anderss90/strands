@@ -5,13 +5,20 @@ import { User } from '@/types/user';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key-change-in-production';
+const JWT_PASSWORD_RESET_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'; // Use same secret for simplicity
 const JWT_EXPIRES_IN = '30d';
 const JWT_REFRESH_EXPIRES_IN = '7d';
+const JWT_PASSWORD_RESET_EXPIRES_IN = '1h'; // 1 hour expiration for password reset tokens
 
 export interface JWTPayload {
   userId: string;
   email: string;
   username: string;
+}
+
+export interface PasswordResetPayload {
+  userId: string;
+  email: string;
 }
 
 export interface AuthTokens {
@@ -142,3 +149,53 @@ export async function createUser(
   return result.rows[0] as User;
 }
 
+// Generate password reset token
+export function generatePasswordResetToken(userId: string, email: string): string {
+  const payload: PasswordResetPayload = {
+    userId,
+    email,
+  };
+
+  return jwt.sign(payload, JWT_PASSWORD_RESET_SECRET, {
+    expiresIn: JWT_PASSWORD_RESET_EXPIRES_IN,
+  });
+}
+
+// Verify password reset token
+export function verifyPasswordResetToken(token: string): PasswordResetPayload {
+  try {
+    const decoded = jwt.verify(token, JWT_PASSWORD_RESET_SECRET) as PasswordResetPayload;
+    return decoded;
+  } catch (error) {
+    throw new Error('Invalid or expired password reset token');
+  }
+}
+
+// Update user email
+export async function updateUserEmail(userId: string, newEmail: string): Promise<User> {
+  const result = await query(
+    `UPDATE users 
+     SET email = $1, updated_at = NOW()
+     WHERE id = $2
+     RETURNING *`,
+    [newEmail, userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error('User not found');
+  }
+
+  return result.rows[0] as User;
+}
+
+// Update user password
+export async function updateUserPassword(userId: string, newPassword: string): Promise<void> {
+  const passwordHash = await hashPassword(newPassword);
+  
+  await query(
+    `UPDATE users 
+     SET password_hash = $1, updated_at = NOW()
+     WHERE id = $2`,
+    [passwordHash, userId]
+  );
+}

@@ -23,6 +23,9 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState(user?.display_name || '');
   const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
   const [isSavingDisplayName, setIsSavingDisplayName] = useState(false);
+  const [email, setEmail] = useState(user?.email || '');
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -34,7 +37,10 @@ export default function ProfilePage() {
     if (user?.display_name) {
       setDisplayName(user.display_name);
     }
-  }, [user?.display_name]);
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user?.display_name, user?.email]);
 
   const handleLogout = () => {
     logout();
@@ -120,6 +126,69 @@ export default function ProfilePage() {
     setIsEditingDisplayName(false);
   };
 
+  const handleSaveEmail = async () => {
+    if (!email.trim()) {
+      setNotificationMessage({ type: 'error', text: 'Email cannot be empty' });
+      setTimeout(() => setNotificationMessage(null), 5000);
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setNotificationMessage({ type: 'error', text: 'Please enter a valid email address' });
+      setTimeout(() => setNotificationMessage(null), 5000);
+      return;
+    }
+
+    if (email.trim() === user?.email) {
+      setIsEditingEmail(false);
+      return;
+    }
+
+    setIsSavingEmail(true);
+    setNotificationMessage(null);
+
+    try {
+      let token: string | null = null;
+      try {
+        token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      } catch (error) {
+        throw new Error('Unable to access storage. Please check your browser settings.');
+      }
+
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      await userApi.updateProfile({ email: email.trim() });
+      
+      // Refresh user data in AuthContext
+      await refreshUser();
+      setIsEditingEmail(false);
+      setNotificationMessage({ 
+        type: 'success', 
+        text: 'Email updated successfully!' 
+      });
+      setTimeout(() => setNotificationMessage(null), 5000);
+    } catch (error: any) {
+      setNotificationMessage({ 
+        type: 'error', 
+        text: error.message || 'Failed to update email' 
+      });
+      setTimeout(() => setNotificationMessage(null), 5000);
+      // Revert to original value on error
+      setEmail(user?.email || '');
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
+
+  const handleCancelEmail = () => {
+    setEmail(user?.email || '');
+    setIsEditingEmail(false);
+  };
+
   if (loading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -195,7 +264,45 @@ export default function ProfilePage() {
               <label className="block text-sm font-medium text-gray-400 mb-1">
                 Email
               </label>
-              <p className="text-gray-100">{user?.email || 'N/A'}</p>
+              {isEditingEmail ? (
+                <div className="space-y-2">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isSavingEmail}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 min-h-[44px]"
+                    placeholder="your.email@example.com"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveEmail}
+                      disabled={isSavingEmail || !email.trim()}
+                      className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    >
+                      {isSavingEmail ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={handleCancelEmail}
+                      disabled={isSavingEmail}
+                      className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-100">{user?.email || 'N/A'}</p>
+                  <button
+                    onClick={() => setIsEditingEmail(true)}
+                    className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Notifications Section */}
