@@ -190,18 +190,11 @@ export default function StrandViewer({ strandId, groupId, onClose, onEdit, onRef
       // When back button is pressed while viewing a strand, close the viewer
       isHandlingBackRef.current = true;
       
-      // If we're on /home, navigate to /home to ensure we're on the home tab
-      if (pathname === '/home') {
-        router.push('/home');
-      }
+      // Always navigate to /home when back button is pressed
+      // This ensures proper navigation even when coming from notification links
+      router.push('/home');
       
       handleClose();
-      
-      // If we're not on /home, push state back to prevent browser from navigating away
-      // If we're on /home, we want to allow navigation to /home
-      if (pathname !== '/home') {
-        window.history.pushState(historyState, '', window.location.href);
-      }
       
       // Reset flag after a brief delay
       setTimeout(() => {
@@ -442,34 +435,13 @@ export default function StrandViewer({ strandId, groupId, onClose, onEdit, onRef
   };
 
   const handleClose = () => {
-    // If we're on the home page, close the viewer and ensure we're on the home tab
-    if (pathname === '/home') {
-      if (onClose) {
-        onClose();
-      }
-      // Navigate to /home to ensure we're on the home tab (even if already there)
-      router.push('/home');
-      return;
-    }
-    
+    // Always navigate to home when closing, especially when coming from notification links
     if (onClose) {
       onClose();
-    } else {
-      // Navigate within the app instead of browser back
-      // Try to go to a sensible default based on current path
-      if (pathname?.includes('/groups/')) {
-        // Extract group ID from path if we're on a group page
-        const groupMatch = pathname.match(/\/groups\/([^\/]+)/);
-        if (groupMatch) {
-          router.push(`/groups/${groupMatch[1]}`);
-        } else {
-          router.push('/groups');
-        }
-      } else {
-        // Default to home
-        router.push('/home');
-      }
     }
+    // Always navigate to /home to ensure we're on the home view
+    // This fixes issues when entering via notification links where history might be empty
+    router.push('/home');
   };
 
   if (loading) {

@@ -14,11 +14,17 @@ export default function BottomNav() {
   }
 
   const handleHomeClick = (e: React.MouseEvent) => {
-    // If we're already on home, dispatch an event to close any open strand viewers
+    // Always navigate to home and close any open strand viewers
     if (pathname === '/home') {
       e.preventDefault();
       // Dispatch custom event to close strand viewer
       window.dispatchEvent(new CustomEvent('closeStrandViewer'));
+      // Ensure we're on the home page (in case of query params or history issues)
+      router.push('/home');
+    } else {
+      // If not on home, navigate to home
+      e.preventDefault();
+      router.push('/home');
     }
   };
 
